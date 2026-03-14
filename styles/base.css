@@ -1,0 +1,148 @@
+/* Базовые стили и сброс */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+@font-face {
+    font-family: 'Geometria';
+    src: url('../fonts/Geometria.woff2') format('woff2'),
+         url('../fonts/Geometria.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Geometria';
+    src: url('../fonts/Geometria-Bold.woff2') format('woff2'),
+         url('../fonts/Geometria-Bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --primary-color: #28a745;
+    --primary-dark: #1f7a37;
+    --button-color: #34d058;
+    --button-dark: #22863a;
+    --bg-dark: #212121;
+    --bg-darker: #1a1a1a;
+    --text-light: #ffffff;
+    --text-gray: #ffffff;
+    --text-dark: #333333;
+    --accent-gradient: linear-gradient(135deg, #28a745 0%, #2ecc71 100%);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --transition: all 0.3s ease;
+}
+
+body {
+    background-color: var(--bg-dark);
+    font-family: 'Geometria', Arial, Helvetica, sans-serif;
+    color: var(--text-light);
+    line-height: 1.6;
+    overflow: hidden;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* дополнительное правило для скрытия полос прокрутки в браузерах */
+html {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+
+::-webkit-scrollbar {
+    display: none; 
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(40, 167, 69, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Кнопки */
+.button {
+    display: inline-block;
+    padding: 18px 35px;
+    background: transparent;  
+    color: var(--button-color); 
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 18px;
+    border-radius: 50px;
+    transition: var(--transition);
+    border: 2px solid var(--button-color); 
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: none;  
+}
+
+.button:hover {
+    background: var(--button-color);  
+    color: var(--text-dark);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(52, 208, 88, 0.4);
+}
+
+.button-white {
+    background: transparent;
+    color: var(--button-color);
+    border-color: var(--button-color);
+    box-shadow: none;
+}
+
+.button-white:hover {
+    background: var(--button-color);
+    color: var(--text-dark);
+    border-color: var(--button-color);
+}
+
+/* Анимации */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(40, 167, 69, 0.6);
+    }
+}

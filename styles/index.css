@@ -1,0 +1,301 @@
+/* Стили для главной страницы */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    position: relative;
+    z-index: 10;
+    animation: fadeInUp 0.8s ease;
+}
+
+.header-brand {
+    display: inline-flex;
+    align-items: flex-start;
+    text-decoration: none;
+    gap: 50px;
+    position: relative;
+    transition: var(--transition);
+    padding-top: 0;
+}
+
+.header-brand:hover {
+    transform: scale(1.05);
+}
+
+.header-logo {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-color);
+    color: var(--bg-dark);
+    font-size: 36px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.header-logo::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+
+    20%,
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+.header-title {
+    color: var(--text-light);
+    font-size: 28px;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.header-menu {
+    display: flex;
+    gap: 50px;
+    margin-top: 0;
+    margin-left: auto;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.header-link {
+    color: var(--text-light);
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    transition: var(--transition);
+    position: relative;
+    padding-bottom: 5px;
+}
+
+.header-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--primary-color);
+    transition: var(--transition);
+}
+
+.header-link:hover {
+    color: var(--primary-color);
+}
+
+.header-link:hover::before {
+    width: 100%;
+}
+
+.header-link span {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+/* Стили для основной страницы */
+.main {
+    position: relative;
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: flex-start;
+    padding: 20px 0 40px 0;
+}
+
+.main-info {
+    flex: 1;
+    max-width: 700px;
+    position: relative;
+    z-index: 2;
+}
+
+.main-title {
+    font-size: 80px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 50px;
+    text-transform: uppercase;
+    animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.main-title span {
+    color: var(--primary-color);
+    font-size: 100px;
+    display: inline-block;
+    transform: rotate(-5deg);
+    text-shadow: 5px 5px 0 rgba(40, 167, 69, 0.3);
+    animation: float 3s ease-in-out infinite;
+}
+
+.main-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+    animation: fadeInUp 0.8s ease 0.3s both;
+}
+
+.main-feature {
+    background: rgba(53, 187, 84, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-light);
+    backdrop-filter: blur(5px);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.main-feature::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(40, 167, 69, 0.2), transparent);
+    transition: var(--transition);
+}
+
+.main-feature:hover {
+    background: rgba(40, 167, 69, 0.2);
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.main-feature:hover::before {
+    left: 100%;
+    transition: 0.5s;
+}
+
+.main-description {
+    font-size: 24px;
+    line-height: 1.5;
+    color: #ffffff;
+    margin-bottom: 30px;
+    max-width: var(--main-desc-width, 800px);
+    animation: fadeInUp 0.8s ease 0.4s both;
+    position: relative;
+    padding-left: 20px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.main-actions {
+    display: flex;
+    gap: 25px;
+    animation: fadeInUp 0.8s ease 0.5s both;
+    margin-top: 10px;
+}
+
+.main-image {
+    position: absolute;
+    right: max(-50px, -10vw);
+    top: 4%; 
+    transform: none;
+    z-index: 1;
+    animation: float 5s ease-in-out infinite;
+    width: 600px;
+    height: 600px;
+    border-radius: 30px;
+    overflow: hidden;
+}
+
+.main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: var(--transition);
+    filter: brightness(0.9) contrast(1.1);
+}
+
+.main-image:hover {
+    transform: translateY(-50%) scale(1.02);
+    border-color: var(--primary-color);
+    box-shadow: 0 30px 50px rgba(56, 185, 86, 0.2);
+}
+
+.main-image:hover img {
+    filter: brightness(1) contrast(1.1);
+    transform: scale(1.05);
+}
+
+/* Добавляем декоративный элемент поверх картинки */
+.main-image::before {
+    display: none;
+}
+
+.main-image:hover::before {
+    opacity: 0;
+}
+
+/* Добавляем рамку с эффектом неона */
+.main-image::after {
+    display: none;
+}
+
+.main-image:hover::after {
+    opacity: 0;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Стилизация скроллбара */
+::-webkit-scrollbar {
+    width: 10px;
+    background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Выделение текста */
+::selection {
+    background: var(--primary-color);
+    color: var(--bg-dark);
+}

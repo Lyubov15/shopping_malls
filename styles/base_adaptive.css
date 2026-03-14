@@ -1,0 +1,70 @@
+/* Адаптивные стили для базовых элементов */
+@media (max-width: 1200px) {
+    .container {
+        padding: 0 30px;
+    }
+    
+    .button {
+        padding: 15px 30px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 992px) {
+    .container {
+        padding: 0 25px;
+    }
+    
+    .button {
+        padding: 14px 25px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 20px;
+    }
+    
+    .button {
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: 160px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .button {
+        padding: 10px 15px;
+        font-size: 13px;
+        min-width: 140px;
+    }
+}
+
+@media (max-width: 360px) {
+    .button {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-width: 120px;
+    }
+}
+
+/* на мобильных разрешаем вертикальную прокрутку */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    html {
+        -ms-overflow-style: auto; /* вернуть стиль полосы прокрутки */
+        scrollbar-width: auto;
+    }
+    ::-webkit-scrollbar {
+        display: block;
+        width: 6px;
+    }
+}

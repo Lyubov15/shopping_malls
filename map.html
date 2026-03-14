@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
+    <title>Карта объектов</title>
+
+    <!-- Подключение стилей Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <link href="styles/base.css" rel="stylesheet" />
+    <link href="styles/base_adaptive.css" rel="stylesheet" />
+    <link href="styles/map.css" rel="stylesheet" />
+</head>
+
+<body>
+    <header class="header">
+        <div class="container header-inner">
+            <a class="header-brand" href="index.html">
+                <div class="header-logo">T</div>
+                <div class="header-title">radeMap</div>
+            </a>
+            <nav class="header-menu">
+                <a class="header-link" href="./map.html">Карта <span>объектов</span></a>
+                <a class="header-link" href="./analytics.html">Аналитика <span>спроса</span></a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- контейнер с картой -->
+    <div id="map" style="height: 100vh;"></div>
+
+    <!-- боковая панель -->
+    <aside class="main" id="sidebar">
+        <div class="main-header">
+            <div class="main-title">Рассчитать путь</div>
+            <div class="main-text">Выберите параметры для расчёта пути</div>
+        </div>
+        <div class="main-content">
+            <div class="main-fields">
+                <div class="main-block-title">Маршрут</div>
+
+                <div class="main-field" id="fromField">
+                    <img src="images/Icon.png" class="input-icon" alt="Откуда" />
+                    <input id="from" placeholder="Откуда: начните вводить адрес" autocomplete="off" />
+                    <div class="main-ac" id="fromAc" role="listbox" aria-label="Подсказки адресов"></div>
+                </div>
+
+                <div class="main-field" id="toField">
+                    <img src="images/Icon(1).png" class="input-icon" alt="Куда" />
+                    <input id="to" placeholder="Куда: начните вводить адрес" autocomplete="off" />
+                    <div class="main-ac" id="toAc" role="listbox" aria-label="Подсказки адресов"></div>
+                </div>
+
+                <!-- Фильтры по районам -->
+                <div id="tc-filters" class="filters">
+                    <div class="filter-section" id="districtFilter">
+                        <div class="filter-title">Районы</div>
+                        <div class="filter-actions">
+                            <button type="button" id="selectAllDistricts" class="small-btn">Выбрать все</button>
+                            <button type="button" id="resetDistricts" class="small-btn">Сбросить</button>
+                        </div>
+                        <div id="districtCheckboxes" class="checkbox-list"></div>
+                    </div>
+                </div>
+
+                <!-- Кнопки управления -->
+                <button type="button" id="toggleObstacles" class="toggle-btn" aria-pressed="false">
+                    Барьеры среды
+                </button>
+                <button type="button" id="toggleInfluence" class="toggle-btn" aria-pressed="false">
+                    Зоны влияния
+                </button>
+                <button type="button" id="toggleDeficit" class="toggle-btn" aria-pressed="false">
+                    Зоны дефицита
+                </button>
+                <button type="button" id="togglePlace" class="toggle-btn" aria-pressed="false">
+                    Разместить объект
+                </button>
+                <button type="button" id="togglePotential" class="toggle-btn" aria-pressed="false">
+                    Оценка потенциала
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Библиотека для интерактивных карт -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Рассчитать расстояние между двумя координатам -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <!-- Визуализация диаграмм Вороного -->
+    <script src="https://d3js.org/d3-delaunay.v6.min.js"></script>
+    <!-- Подключение скриптов -->
+    <script src="database.js"></script>
+    <!-- библиотека для расчёта диаграмм Вороного (внешний файл) -->
+    <script src="Voronoi.js"></script>
+    <script>
+        // Глобальные переменные
+        let map;
+        let mallGroup;
+        let obstacleLayer = null;
+        let obstaclesVisible = false;
+        let obstaclesLoaded = false;
+        let oblastLayer = null;               // слой для границы области
+        let oblastLoaded = false;            // флаг загрузки области
+        let oblastGeo = null;                // raw geojson объекта области
+        let allMarkers = [];
+        let influenceLayer = null; // слой для зон влияния
+        let volgograd_boundaries = null; // административные границы Волгограда
+        let bordersLoaded = false; // флаг загрузки границ
+
+        let placeMode = false; // режим добавления нового ТЦ
+        let newMallCount = 0; // счетчик добавленных маркеров
+
+        // Вспомогательная функция для отображения сообщений (при удалении элемента возвращается в консоль)
+        function setInfo(message) {
+            const el = document.getElementById('info');
+            if (el) {
+                el.innerHTML = message;
+            } else {
+                console.log(message);
+            }
+        }
+
+        // Инициализация карты и создание маркеров
+        document.addEventListener('DOMContentLoaded', () => {
+            // Инициализация карты OpenStreetMap
+            map = L.map('map').setView([48.711667, 44.513889], 10);
+
+            // Подключение тайлов OSM
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> участники',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Создание группы для маркеров ТЦ
+            mallGroup = L.layerGroup().addTo(map);
+
+            // Загружаем GeoJSON файл с препятствиями (НЕ добавляем на карту сразу)
+            loadObstaclesGeoJSON();
+            // Загружаем GeoJSON файл с границей области
+            loadOblastGeoJSON();
+
+            // Загружаем административные границы Волгограда
+            if (window.loadAreaGeoJSON) {
+                loadAreaGeoJSON('Волгоград').then(geojson => {
+                    volgograd_boundaries = geojson;
+                    bordersLoaded = true;
+                    console.log('Границы Волгограда загружены');
+                }).catch(error => {
+                    console.warn('Не удалось загрузить границы Волгограда:', error);
+                    bordersLoaded = false;
+                });
+            }
+
+            // Создаём маркеры торговых центров из database.js
+            if (window.shoppingCenters && window.shoppingCenters.length > 0) {
+                console.log('Загружено ТЦ:', window.shoppingCenters.length);
+
+                window.shoppingCenters.forEach((sc) => {
+                    // Создаём синий маркер для торгового центра
+                    const blueIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #3388ff; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
+                    });
+
+                    const marker = L.marker([sc.lat, sc.lng], {
+                        icon: blueIcon,
+                    }).bindPopup(
+                        `<b>${sc.name}</b><br>${sc.address}<br>${sc.district}`
+                    );
+
+                    // Добавляем свойства для фильтрации
+                    marker.district = sc.district;
+                    marker.id = sc.id || sc.name;
+
+                    // Сохраняем маркер в массив
+                    allMarkers.push(marker);
+                });
+
+                // Маркеры не показываем до выбора района
+                setInfo('Выберите район для отображения ТЦ');
+            } else {
+                console.error('shoppingCenters не найден или пуст');
+            }
+
+            // Заполнение списка районов
+            function populateDistricts() {
+                const names = [
+                    'Тракторозаводский район',
+                    'Краснооктябрьский район',
+                    'Дзержинский район',
+                    'Центральный район',
+                    'Ворошиловский район',
+                    'Советский район',
+                    'Кировский район',
+                    'Красноармейский район'
+                ];
+                const container = document.getElementById('districtCheckboxes');
+                if (container) {
+                    container.innerHTML = ''; // Очищаем контейнер
+                    names.forEach(n => {
+                        const label = document.createElement('label');
+                        label.style.display = 'block';
+                        label.style.margin = '5px 0';
+                        label.innerHTML = `<input type="checkbox" value="${n}" style="margin-right: 5px;"> ${n}`;
+                        container.appendChild(label);
+                    });
+                }
+            }
+
+            populateDistricts();
+
+            // Обработчики событий фильтров
+            const districtCheckboxes = document.getElementById('districtCheckboxes');
+            if (districtCheckboxes) {
+                districtCheckboxes.addEventListener('change', filterMarkersByDistrict);
+            }
+
+            document.getElementById('selectAllDistricts')?.addEventListener('click', () => {
+                document.querySelectorAll('#districtCheckboxes input').forEach(i => i.checked = true);
+                filterMarkersByDistrict();
+            });
+
+            document.getElementById('resetDistricts')?.addEventListener('click', () => {
+                document.querySelectorAll('#districtCheckboxes input').forEach(i => i.checked = false);
+                filterMarkersByDistrict();
+            });
+
+            // Обработчик для кнопки "Барьеры среды"
+            const obstaclesBtn = document.getElementById('toggleObstacles');
+            if (obstaclesBtn) {
+                obstaclesBtn.addEventListener('click', toggleObstacles);
+            }
+
+            // обработчик клика карты для добавления нового ТЦ в режиме размещения
+            map.on('click', onMapClickAddMall);
+
+            // Обработчики для других кнопок
+            document.getElementById('toggleInfluence')?.addEventListener('click', () => {
+                const btn = document.getElementById('toggleInfluence');
+
+                if (influenceLayer && map.hasLayer(influenceLayer)) {
+                    map.removeLayer(influenceLayer);
+                    if (oblastLayer && map.hasLayer(oblastLayer)) {
+                        map.removeLayer(oblastLayer);
+                    }
+                    btn.textContent = 'Зоны влияния';
+                    btn.classList.remove('is-on');
+                    btn.setAttribute('aria-pressed', 'false');
+                    setInfo('Зоны влияния скрыты');
+                    influenceLayer = null;
+                    return;
+                }
+
+                setInfo('Идёт расчёт зон влияния для видимых ТЦ...');
+                updateVoronoiZones();
+            });
+
+            document.getElementById('toggleDeficit')?.addEventListener('click', () => {
+                setInfo('Функция "Зоны дефицита" в разработке');
+            });
+
+            document.getElementById('togglePlace')?.addEventListener('click', () => {
+                placeMode = !placeMode;
+                const btn = document.getElementById('togglePlace');
+                if (placeMode) {
+                    btn.textContent = 'Остановить размещение';
+                    btn.classList.add('is-on');
+                    btn.setAttribute('aria-pressed', 'true');
+                    setInfo('Режим размещения включен. Кликните на карте, чтобы добавить новый ТЦ.');
+                } else {
+                    btn.textContent = 'Разместить объект';
+                    btn.classList.remove('is-on');
+                    btn.setAttribute('aria-pressed', 'false');
+                    setInfo('Режим размещения выключен.');
+                }
+            });
+
+            document.getElementById('togglePotential')?.addEventListener('click', () => {
+                setInfo('Функция "Оценка потенциала" в разработке');
+            });
+        });
+
+        // Функция загрузки препятствий
+        function loadObstaclesGeoJSON() {
+            fetch('./obstacles.geojson')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    // Проверяем структуру GeoJSON
+                    if (!data.type || data.type !== 'FeatureCollection') {
+                        throw new Error('Файл не является корректным GeoJSON FeatureCollection');
+                    }
+
+                    // Создаем слой с препятствиями
+                    obstacleLayer = L.geoJSON(data, {
+                        style: {
+                            fillColor: '#191970',
+                            color: '#0000CD',
+                            weight: 2,
+                            fillOpacity: 0.3
+                        },
+                        pointToLayer: function (feature, latlng) {
+                            // Не рисуем маркеры для точек - используем только полигоны
+                            return null;
+                        },
+                        onEachFeature: function (feature, layer) {
+                            // При клике показываем информацию
+                            layer.on('click', (e) => {
+                                const props = feature.properties || {};
+                                let infoText = '<strong>Препятствие</strong><br>';
+                                if (Object.keys(props).length > 0) {
+                                    infoText += Object.entries(props)
+                                        .map(([key, value]) => `${key}: ${value}`)
+                                        .join('<br>');
+                                } else {
+                                    infoText += 'Нет дополнительной информации';
+                                }
+                                setInfo(infoText);
+                            });
+
+                            // Не показываем всплывающую подсказку и не отображаем имя (Volga и др.)
+                            // layer.bindTooltip отключен по требованию
+                        }
+                    });
+
+                    obstaclesLoaded = true;
+                    console.log(`Препятствия загружены: ${data.features.length} объектов`);
+                    setInfo('Препятствия загружены. Нажмите кнопку "Барьеры среды" для отображения');
+                })
+                .catch((error) => {
+                    console.error('Ошибка загрузки препятствий:', error);
+                    setInfo(`Ошибка загрузки препятствий: ${error.message}`);
+                });
+        }
+
+        // Функция загрузки границы области из oblast.geojson
+        function loadOblastGeoJSON() {
+            fetch('./oblast.geojson')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (!data.type || data.type !== 'FeatureCollection') {
+                        throw new Error('Файл области не является корректным GeoJSON FeatureCollection');
+                    }
+                    oblastGeo = data; // keep raw for clipping
+                    oblastLayer = L.geoJSON(data, {
+                        style: {
+                            color: '#FF4500',
+                            weight: 2,
+                            dashArray: '5,5',
+                            fillOpacity: 0
+                        }
+                    });
+                    oblastLoaded = true;
+                    console.log('Граница области загружена');
+                })
+                .catch((error) => {
+                    console.error('Ошибка загрузки границы области:', error);
+                });
+        }
+
+        // Функция фильтрации маркеров по районам
+        function filterMarkersByDistrict() {
+            // Получаем выбранные районы
+            const selectedDistricts = Array.from(document.querySelectorAll('#districtCheckboxes input:checked'))
+                .map(i => i.value);
+
+            console.log('Выбранные районы:', selectedDistricts);
+
+            // Сначала скрываем все маркеры
+            allMarkers.forEach(marker => {
+                if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            });
+
+            // Очищаем полигоны Вороного при изменении районов
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                map.removeLayer(influenceLayer);
+                influenceLayer = null;
+            }
+
+            // Сбрасываем кнопку Зоны влияния
+            const btn = document.getElementById('toggleInfluence');
+            if (btn) {
+                btn.textContent = 'Зоны влияния';
+                btn.classList.remove('is-on');
+                btn.setAttribute('aria-pressed', 'false');
+            }
+
+            // Если ничего не выбрано - не показываем маркеры
+            if (selectedDistricts.length === 0) {
+                setInfo('Выберите район для отображения ТЦ');
+                return;
+            }
+
+            // Показываем маркеры только выбранных районов + новые маркеры без района
+            let visibleCount = 0;
+            allMarkers.forEach(marker => {
+                if (!marker.district || selectedDistricts.includes(marker.district)) {
+                    marker.addTo(map);
+                    visibleCount++;
+                }
+            });
+
+            setInfo(`Показано ТЦ: ${visibleCount}`);
+        }
+
+        function updateVoronoiZones() {
+            if (!window.turf || !window.turf.voronoi) {
+                setInfo('Turf.js не доступен. Проверьте подключение https://unpkg.com/@turf/turf@6/turf.min.js');
+                console.error('turf.voronoi is not available');
+                return;
+            }
+
+            const visibleMarkers = allMarkers.filter(marker => map.hasLayer(marker));
+            if (visibleMarkers.length < 2) {
+                setInfo('Для построения полигонов Тиссена/Вороного нужны минимум 2 видимых торговых центра. Выберите районы или разместите еще точки!');
+                return;
+            }
+
+            let centers = visibleMarkers.map(marker => {
+                let centerData = window.shoppingCenters.find(sc =>
+                    Math.abs(sc.lat - marker.getLatLng().lat) < 0.0001 &&
+                    Math.abs(sc.lng - marker.getLatLng().lng) < 0.0001
+                );
+                return {
+                    lat: marker.getLatLng().lat,
+                    lng: marker.getLatLng().lng,
+                    name: centerData ? centerData.name : (marker.customName || 'Новый ТЦ')
+                };
+            });
+
+            const ptFeatures = centers.map(c => window.turf.point([c.lng, c.lat], { name: c.name }));
+            const ptsFC = window.turf.featureCollection(ptFeatures);
+
+            let bbox = null;
+            if (oblastGeo && oblastGeo.features && oblastGeo.features.length > 0) {
+                bbox = window.turf.bbox(oblastGeo);
+            } else {
+                const lngs = centers.map(c => c.lng);
+                const lats = centers.map(c => c.lat);
+                bbox = [Math.min(...lngs) - 0.05, Math.min(...lats) - 0.05, Math.max(...lngs) + 0.05, Math.max(...lats) + 0.05];
+            }
+
+            let voronoiFC = window.turf.voronoi(ptsFC, { bbox: bbox });
+            if (!voronoiFC) voronoiFC = window.turf.featureCollection([]);
+
+            if (oblastGeo && oblastGeo.features && oblastGeo.features.length > 0) {
+                let clipFeature = oblastGeo.features[0];
+                if (clipFeature.geometry && clipFeature.geometry.type === 'LineString') {
+                    const coords = clipFeature.geometry.coordinates.slice();
+                    if (coords.length && coords[0][0] !== coords[coords.length - 1][0] && coords[0][1] !== coords[coords.length - 1][1]) {
+                        coords.push(coords[0]);
+                    }
+                    clipFeature = window.turf.feature({
+                        type: 'Polygon',
+                        coordinates: [coords]
+                    });
+                }
+                voronoiFC = window.turf.featureCollection(
+                    voronoiFC.features.map(f => {
+                        try {
+                            const clipped = window.turf.intersect(f, clipFeature);
+                            return clipped || null;
+                        } catch (e) {
+                            return null;
+                        }
+                    }).filter(f => f !== null)
+                );
+            }
+
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                map.removeLayer(influenceLayer);
+            }
+
+            influenceLayer = L.geoJSON(voronoiFC, {
+                style: {
+                    color: '#8B0000',
+                    weight: 1.5,
+                    opacity: 0.8,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.15
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties && feature.properties.site && feature.properties.site.properties) {
+                        layer.bindPopup(`<b>${feature.properties.site.properties.name}</b>`);
+                    }
+                }
+            }).addTo(map);
+
+            if (oblastLoaded && oblastLayer) {
+                oblastLayer.addTo(map);
+            }
+
+            const btn = document.getElementById('toggleInfluence');
+            if (btn) {
+                btn.textContent = 'Зоны влияния (вкл)';
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+
+            setInfo(`Построено ${voronoiFC.features.length} полигона(ов) зоны влияния`);
+        }
+
+        function createNewMallMarker(latlng) {
+            console.log('Добавление нового ТЦ в точке', latlng);
+            newMallCount++;
+            const mallName = `Новый ТЦ ${newMallCount}`;
+            const greenIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: #27ae60; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const marker = L.marker([latlng.lat, latlng.lng], { icon: greenIcon });
+
+            marker.customName = mallName;
+            marker.district = null; // показываем в любом выбранном фильтре
+            marker.id = `new-${Date.now()}`;
+
+            marker.bindPopup(`
+                <div style="min-width:145px;">
+                    <strong>${mallName}</strong><br>
+                    Новая точка размещения<br><br>
+                    <button id="delete-mall-${marker.id}" style="font-size:12px; padding:4px 6px;">Удалить</button>
+                </div>
+            `);
+
+            marker.on('popupopen', (e) => {
+                const btn = e.popup.getElement().querySelector(`#delete-mall-${marker.id}`);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        removeNewMallMarker(marker);
+                    });
+                }
+            });
+
+            allMarkers.push(marker);
+            marker.addTo(map);
+            marker.openPopup();
+
+            window.shoppingCenters.push({
+                name: mallName,
+                lat: latlng.lat,
+                lng: latlng.lng,
+                address: 'Добавлен вручную',
+                district: 'Новый объект'
+            });
+
+            setInfo(`Добавлен ${mallName} на карте. Для добавления ещё точек нажмите на карту.`);
+
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                updateVoronoiZones();
+            }
+        }
+
+        function removeNewMallMarker(marker) {
+            if (map.hasLayer(marker)) {
+                map.removeLayer(marker);
+            }
+
+            const idx = allMarkers.indexOf(marker);
+            if (idx !== -1) allMarkers.splice(idx, 1);
+
+            const existingIdx = window.shoppingCenters.findIndex(sc =>
+                Math.abs(sc.lat - marker.getLatLng().lat) < 0.000001 &&
+                Math.abs(sc.lng - marker.getLatLng().lng) < 0.000001 &&
+                sc.name === marker.customName
+            );
+            if (existingIdx !== -1) window.shoppingCenters.splice(existingIdx, 1);
+
+            setInfo(`${marker.customName} удалён`);
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                updateVoronoiZones();
+            }
+        }
+
+        function onMapClickAddMall(e) {
+            if (!placeMode) return;
+            console.log('Клик карты (режим размещения):', e.latlng);
+            createNewMallMarker(e.latlng);
+        }
+
+        // Функция показа всех маркеров
+        function showAllMarkers() {
+            allMarkers.forEach(marker => {
+                if (!map.hasLayer(marker)) {
+                    marker.addTo(map);
+                }
+            });
+            setInfo(`Всего ТЦ: ${allMarkers.length}`);
+        }
+
+        // Функция для переключения видимости препятствий
+        function toggleObstacles() {
+            const btn = document.getElementById('toggleObstacles');
+
+            if (!obstaclesLoaded) {
+                setInfo('Препятствия еще не загружены, попробуйте через секунду...');
+                return;
+            }
+
+            if (!obstacleLayer) {
+                setInfo('Слой препятствий не инициализирован');
+                return;
+            }
+
+            if (obstaclesVisible) {
+                // Если препятствия видны - скрываем их
+                if (map.hasLayer(obstacleLayer)) {
+                    map.removeLayer(obstacleLayer);
+                }
+                obstaclesVisible = false;
+                console.log('Препятствия скрыты');
+                setInfo('Препятствия скрыты');
+                btn.textContent = 'Барьеры среды';
+                btn.classList.remove('is-on');
+            } else {
+                // Если препятствия не видны - показываем их
+                if (!map.hasLayer(obstacleLayer)) {
+                    obstacleLayer.addTo(map);
+                }
+                obstaclesVisible = true;
+                console.log('Препятствия показаны');
+                setInfo('Препятствия отображены на карте');
+                btn.textContent = 'Барьеры среды (вкл)';
+                btn.classList.add('is-on');
+            }
+
+            btn.setAttribute('aria-pressed', String(obstaclesVisible));
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,719 @@
+/* Переопределяем черный фон для белого экрана */
+body {
+    background: #ffffff;
+    color: #111111;
+}
+
+#map {
+    position: fixed;
+    inset: 0;
+}
+
+/* Фиксированная белая полоса вверху заголовка */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    color: #111111;
+    z-index: 40;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.header-logo {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color, #28a745);
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.header-title {
+    color: #111111;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.header-menu {
+    display: flex;
+    gap: 20px;
+    margin-left: auto;
+    align-items: center;
+}
+
+.header-link {
+    color: #333333;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.header-link span {
+    color: var(--primary-color, #28a745);
+}
+
+#map {
+    top: 64px; 
+}
+
+.main {
+    border-radius: 18px;
+    box-shadow: 0 7px 20px 0 #0000002E;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.96);
+    left: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    position: fixed;
+    top: 110px;
+    bottom: 20px;
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    overflow: auto; /* позволяем прокручивать панель */
+    z-index: 5;
+}
+
+.main-header {
+    padding: 18px 18px 12px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+}
+
+.main-title {
+    font-size: 20px;
+    line-height: 100%;
+    font-weight: bold;
+    color: #111111;
+}
+
+.main-text {
+    font-size: 12px;
+    margin-top: 5px;
+    color: #7C7C7C;
+}
+
+.main-content {
+    padding: 14px 18px 18px 18px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #bbb transparent;
+}
+
+/* Стили скроллбара для современных браузеров */
+.main-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.main-content::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 10px 0;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+    background: #bbb;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+    background: #888;
+    background-clip: content-box;
+}
+
+/* отступ между блоками Откуда/Куда */
+.main-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* поля маршрута с иконкой */
+.main-field {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    min-height: 40px;
+}
+
+.main-field .input-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    flex-shrink: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.main-field input {
+    flex: 1;
+    padding: 8px 10px 8px 40px;
+    font-size: 14px;
+    border: 1px solid #E8E8E7;
+    border-radius: 6px;
+    height: 40px;
+    margin-left: -32px;
+    z-index: 1;
+    position: relative;
+}
+
+.main-field input::placeholder {
+    color: #999999;
+}
+
+.main-field input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.main-block-title {
+    font-size: 12px;
+    color: #7C7C7C;
+}
+
+/* Кнопка слоя барьеров среды */
+.toggle-btn {
+    width: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #111111;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    gap: 8px;
+    height: 42px;
+    transform: none !important;
+    will-change: background-color, border-color;
+}
+
+.toggle-btn:hover {
+    border-color: rgba(40, 167, 69, 0.3);
+    background: #f8fff9;
+    transform: none !important;
+}
+
+.toggle-btn.is-on {
+    background: rgba(40, 167, 69, 0.12);
+    border-color: rgba(40, 167, 69, 0.45);
+    color: #111111;
+}
+
+.toggle-btn:active {
+    transform: none !important;
+}
+
+.toggle-btn:focus-visible {
+    outline: 2px solid rgba(40, 167, 69, 0.5);
+    outline-offset: 2px;
+    transform: none !important;
+}
+
+
+/* --- фильтры и поиск ТЦ --- */
+.filters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.filters .main-block-title {
+    /* Сделать заголовок фильтров таким же, как "Маршрут" */
+    font-size: 12px;
+    color: #7C7C7C;
+    margin-bottom: 6px;
+}
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.filter-title {
+    /* Сделать как заголовки в панели маршрута */
+    font-size: 12px;
+    color: #7C7C7C;
+    font-weight: 400;
+    margin-bottom: 4px;
+}
+.checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Районы уместимы в панель: двухколоночная сетка, не прокручивается */
+#districtCheckboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.small-btn {
+    background: white;
+    border: 1px solid #E0E0E0;
+    color: #111111;
+    font-size: 13px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.small-btn:hover {
+    background: var(--primary-color, #28a745);
+    color: white;
+    border-color: var(--primary-color, #28a745);
+}
+
+.small-btn:active {
+    transform: scale(0.98);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* убрать белый фон у label-ов фильтров и унифицировать цвет */
+#districtCheckboxes label {
+    background: #f5f5f5;
+    padding: 8px 10px;
+    border-radius: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: #222;
+    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+#districtCheckboxes label:hover {
+    background: #efefef;
+    border-color: var(--primary-color, #28a745);
+}
+
+#districtCheckboxes input[type="checkbox"] {
+    accent-color: var(--primary-color, #28a745);
+    cursor: pointer;
+}
+
+/* явный видимый скроллбар для боковой панели */
+.main::-webkit-scrollbar {
+    width: 10px;
+}
+.main::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 6px;
+}
+.main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* стили для поля поиска */
+#searchField {
+    position: relative;
+}
+#searchField .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+}
+#searchField .search-icon-img {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    pointer-events: none;
+}
+#mallSearch {
+    width: 100%;
+    /* увеличить отступ слева, чтобы текст не начинался сразу после иконки */
+    padding: 8px 10px 8px 48px;
+    font-size: 14px;
+    border: 1px solid #E8E8E7;
+    border-radius: 6px;
+    font-family: inherit;
+    -webkit-text-size-adjust: 100%;
+}
+#mallSearch::placeholder {
+    color: #999999;
+}
+#mallSearch:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* подсказки автодополнения */
+.main-ac {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #E8E8E7;
+    max-height: 160px;
+    overflow-y: auto;
+    z-index: 9999;
+}
+/* повысим приоритет подсказок Yandex Suggest, если они рендерятся в свои блоки */
+.suggest-view, .suggest-view__suggests, .suggest-view__suggests-list {
+    z-index: 10000 !important;
+}
+.main-ac .ac-item {
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.main-ac .ac-item:hover {
+    background: #f0f0f0;
+}
+
+/* форма расчета маршрута */
+.route-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8104px;
+}
+/* новая структура: строка с иконкой и полем ввода */
+.route-form .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.route-form .input-roautow .input-icon {
+    width: 20px;
+    height: 20px;
+}
+.route-form input {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid #E8E8E7;
+    border-radius: 6px;
+}
+.route-form input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+.route-form input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.main-route .main-block-title,
+.main-package .main-block-title {
+    margin-bottom: 6px;
+}
+
+.main-sizes {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.main-size-card {
+    border: 1px solid #E8E8E7;
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease, border-color .12s ease, background .12s ease;
+    min-height: 139px;
+}
+
+.main-size-card:hover {
+    transform: translateY(-1px);
+}
+
+.main-size-card.is-active {
+    background-color: #F8F2D6;
+    border-color: #B7B196;
+}
+
+.main-size-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.main-size-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #111111;
+    line-height: 100%;
+}
+
+.main-size-rate {
+    font-size: 12px;
+    color: #7C7C7C;
+    line-height: 100%;
+}
+
+.main-size-media {
+    margin-top: 8px;
+    height: 57px;
+}
+
+.main-size-description {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #7C7C7C;
+    line-height: 1.2;
+}
+
+.calculate-button {
+    width: 100%;
+}
+
+.main-result {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+    padding: 12px;
+    line-height: 1.25;
+}
+
+.main-result-title {
+    font-weight: bold;
+    font-size: 13px;
+    color: #111111;
+    margin-bottom: 13px;
+}
+
+.main-result-lines {
+    gap: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-result-line {
+    font-size: 13px;
+    color: rgba(17, 17, 17, 0.85);
+    display: flex;
+    justify-content: space-between;
+}
+
+.main-price {
+    margin-top: 18px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.main-price-label {
+    font-size: 12px;
+    color: rgba(17, 17, 17, 0.55);
+}
+
+.main-price-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #111111;
+    letter-spacing: -0.3px;
+}
+
+.main-order-box {
+    background: #ffffff;
+    border: 1px solid #E8E8E7;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.main-order-title {
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #111111;
+}
+
+.main-block-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.order-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
+    margin-top: 6px;
+}
+
+.main-block-info-row.extra-info {
+    display: block;
+    margin-top: 13px;
+}
+
+.main-submit-request {
+    width: 100%;
+    margin-top: 6px;
+}
+
+.main-order-success {
+    display: none;
+    text-align: center;
+    padding: 22px 12px;
+    gap: 12px;
+}
+
+.main-order-success.is-visible {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main-success-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #16a34a;
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 30px;
+}
+
+.main-success-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #111111;
+}
+
+.main-success-subtitle {
+    font-size: 12px;
+    color: rgba(17, 17, 17, 0.55);
+    line-height: 1.3;
+}
+
+.main-speed .main-block-title {
+    margin-bottom: 6px;
+}
+
+.main-speeds {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.main-speed-card {
+    border: 1px solid #E8E8E7;
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease, border-color .12s ease, background .12s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.main-speed-card:hover {
+    transform: translateY(-1px);
+}
+
+.main-speed-card.is-active {
+    background-color: #F8F2D6;
+    border-color: #B7B196;
+}
+
+.main-speed-description {
+    font-size: 12px;
+    color: #7C7C7C;
+    line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+    .main {
+        left: 10px;
+        right: 10px;
+        top: 50%;
+        bottom: 12px;
+        width: auto;
+        max-width: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .main-sizes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    .main {
+        width: 320px;
+    }
+}
+
+@media (max-width: 420px) {
+    #districtCheckboxes {
+        grid-template-columns: 1fr;
+    }
+    #mallSearch {
+        padding-left: 40px;
+    }
+}
+
+.type-buttons {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.type-btn {
+    background: #f4f4f4;
+    border: 1px solid #e6e6e6;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.type-btn:hover { background: #eef6ff; }
