@@ -112,11 +112,10 @@ html, body {
     font-weight: 600;
     margin-bottom: 20px;
     color: #f0f0f0;
-    border-left: 4px solid #28a745;
     padding-left: 14px;
 }
 
-/* Контейнер для canvas */
+/* Контейнер для canvas (холста) */
 .chart-card > div {
     position: relative;
     height: 300px;
@@ -132,9 +131,13 @@ canvas {
 .table-wrapper {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 28px;
-    padding: 8px 0 16px;
     border: 1px solid rgba(40, 167, 69, 0.2);
     overflow-x: auto;
+}
+
+.table-wrapper .chart-title {
+    margin: 0 0 16px 0;
+    padding: 20px 20px 0px 30px;
 }
 
 .analytic-table {
@@ -151,8 +154,18 @@ canvas {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Отступы для первой и последней ячейки */
+.analytic-table th:first-child,
+.analytic-table td:first-child {
+    padding-left: 20px;
+}
+
+.analytic-table th:last-child,
+.analytic-table td:last-child {
+    padding-right: 20px;
+}
+
 .analytic-table th {
-    color: #28a745;
     background: rgba(0, 0, 0, 0.3);
     font-size: 13px;
     text-transform: uppercase;
@@ -180,10 +193,10 @@ canvas {
     margin-bottom: 20px;
 }
 
+/* Аналитический вывод */
 .insight-block h4 {
     font-size: 18px;
     margin-bottom: 12px;
-    color: #28a745;
 }
 
 .insight-block div {
