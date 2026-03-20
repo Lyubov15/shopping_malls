@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Аналитика спроса — TradeMap</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Базовые стили -->
+    <link href="styles/base.css" rel="stylesheet" />
+    <link href="styles/base_adaptive.css" rel="stylesheet" />
+    <link href="styles/analytic.css" rel="stylesheet" />
+    <script src="database.js"></script>
+    <style>
+        /* Дополнительные стили для гарантии отображения */
+        .analytic-charts {
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+        canvas {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 250px !important;
+        }
+        .chart-card {
+            min-height: 320px;
+        }
+    </style>
+</head>
+<body>
+    <div class="analytic-container">
+        <header class="header">
+            <div class="container header-inner">
+                <a class="header-brand" href="index.html">
+                    <div class="header-logo">T</div>
+                    <div class="header-title">radeMap</div>
+                </a>
+                <nav class="header-menu">
+                    <a class="header-link" href="./map.html">Карта <span>объектов</span></a>
+                    <a class="header-link" href="./analytic.html">Аналитика <span>спроса</span></a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="analytic-main">
+            <div class="container analytic-layout">
+                <!-- Левая колонка с KPI -->
+                <div class="analytic-sidebar">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Совокупная торговая площадь</div>
+                        <div class="kpi-value" id="totalArea">0</div>
+                        <div class="kpi-unit">м²</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Количество крупных ТЦ</div>
+                        <div class="kpi-value" id="totalMalls">0</div>
+                        <div class="kpi-unit">объектов</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Обеспеченность (на 1000 чел.)</div>
+                        <div class="kpi-value" id="supplyPerCapita">0</div>
+                        <div class="kpi-unit">м²</div>
+                        <div class="kpi-trend" id="trendLabel"></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Потенциал спроса</div>
+                        <div class="kpi-value" id="demandPotential">0</div>
+                        <div class="kpi-unit">м²</div>
+                        <div class="kpi-footnote">*оценка на основе дефицита (норматив 650 м²/1000 чел.)</div>
+                    </div>
+                </div>
+
+                <!-- Правая область -->
+                <div class="analytic-charts">
+                    <!-- График 1: Торговые площади -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Торговые площади по районам</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="areaChart" style="width:100%; height:100%;"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- График 2: Обеспеченность -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Обеспеченность vs норматив (м²/1000 чел.)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="supplyChart" style="width:100%; height:100%;"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- График 3: Дефицит/профицит -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Дефицит / профицит торговых площадей</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="deficitChart" style="width:100%; height:100%;"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Таблица -->
+                    <div class="table-wrapper">
+                        <h3 class="chart-title">Детальная аналитика по районам</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="analytic-table" id="districtTable">
+                                <thead>
+                                    <tr>
+                                        <th>Район</th>
+                                        <th>Кол-во ТЦ</th>
+                                        <th>Площадь (м²)</th>
+                                        <th>Население (чел.)</th>
+                                        <th>Обеспеченность</th>
+                                        <th>Дефицит/профицит</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Аналитический вывод -->
+                    <div class="insight-block">
+                        <h4>Аналитический вывод</h4>
+                        <div id="insightText"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================================
+        // ДАННЫЕ (из диссертации)
+        // ============================================================
+        
+        // Население по районам (Таблица 7)
+        const POPULATION = {
+            'Дзержинский район': 184707,
+            'Красноармейский район': 159232,
+            'Краснооктябрьский район': 144512,
+            'Советский район': 134608,
+            'Тракторозаводский район': 130460,
+            'Кировский район': 98696,
+            'Центральный район': 81924,
+            'Ворошиловский район': 78080
+        };
+        
+        // Торговые центры (Таблица 5)
+        const SHOPPING_CENTERS = [
+            { name: 'Акварель', district: 'Советский район', area: 121834 },
+            { name: 'Мармелад', district: 'Дзержинский район', area: 80000 },
+            { name: 'Парк Хаус', district: 'Дзержинский район', area: 64000 },
+            { name: 'Ворошиловский', district: 'Ворошиловский район', area: 48000 },
+            { name: 'Европа Сити Молл', district: 'Центральный район', area: 46981 },
+            { name: 'Семь звёзд', district: 'Тракторозаводский район', area: 44410 },
+            { name: 'Аура', district: 'Дзержинский район', area: 27000 },
+            { name: 'Пирамида', district: 'Центральный район', area: 23000 },
+            { name: 'Юбилейный', district: 'Красноармейский район', area: 20000 },
+            { name: 'СтройГрад', district: 'Краснооктябрьский район', area: 13236 },
+            { name: 'Зелёное кольцо', district: 'Советский район', area: 10600 },
+            { name: 'Космос', district: 'Кировский район', area: 10428 },
+            { name: 'Цитрус', district: 'Дзержинский район', area: 8958 },
+            { name: 'Тракторный', district: 'Тракторозаводский район', area: 7262 },
+            { name: 'Советский', district: 'Советский район', area: 3400 },
+            { name: 'Северный', district: 'Краснооктябрьский район', area: 3146 },
+            { name: 'Бейкер Молл', district: 'Дзержинский район', area: 1100 },
+            { name: 'Октава', district: 'Дзержинский район', area: 1027 }
+        ];
+        
+        const NORMATIVE = 650; // м² на 1000 человек
+        
+        // Функции
+        function formatNum(n) {
+            return Math.round(n).toLocaleString('ru-RU');
+        }
+        
+        // Агрегация данных по районам
+        function aggregateData() {
+            let result = {};
+            
+            // Инициализация всех районов
+            for (let district in POPULATION) {
+                result[district] = {
+                    totalArea: 0,
+                    count: 0,
+                    population: POPULATION[district]
+                };
+            }
+            
+            // Суммируем площади ТЦ
+            for (let center of SHOPPING_CENTERS) {
+                if (result[center.district]) {
+                    result[center.district].totalArea += center.area;
+                    result[center.district].count++;
+                }
+            }
+            
+            return result;
+        }
+        
+        // Расчёт дефицита
+        function calcDeficit(area, pop) {
+            if (pop === 0) return 0;
+            let required = (pop / 1000) * NORMATIVE;
+            return required - area;
+        }
+        
+        // Запуск отображения
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Загрузка страницы аналитики...');
+            
+            const data = aggregateData();
+            const districts = Object.keys(POPULATION);
+            
+            // Подготовка массивов для графиков
+            let districtNames = [];
+            let areas = [];
+            let supplyValues = [];
+            let deficitValues = [];
+            let totalAreaAll = 0;
+            let totalMalls = SHOPPING_CENTERS.length;
+            
+            for (let district of districts) {
+                let item = data[district];
+                let area = item.totalArea;
+                let pop = item.population;
+                let supply = pop > 0 ? (area / pop) * 1000 : 0;
+                let deficit = calcDeficit(area, pop);
+                
+                districtNames.push(district);
+                areas.push(area);
+                supplyValues.push(supply);
+                deficitValues.push(deficit);
+                totalAreaAll += area;
+                
+                console.log(`${district}: площадь=${area}, население=${pop}, обеспеченность=${supply.toFixed(1)}, дефицит=${deficit.toFixed(0)}`);
+            }
+            
+            // Общее население
+            let totalPopulation = 0;
+            for (let p of Object.values(POPULATION)) totalPopulation += p;
+            let avgSupply = (totalAreaAll / totalPopulation) * 1000;
+            
+            // Обновляем KPI
+            document.getElementById('totalArea').innerText = formatNum(totalAreaAll);
+            document.getElementById('totalMalls').innerText = totalMalls;
+            document.getElementById('supplyPerCapita').innerText = Math.round(avgSupply);
+            
+            // Потенциал спроса = сумма положительных дефицитов
+            let totalDeficit = 0;
+            for (let d of deficitValues) {
+                if (d > 0) totalDeficit += d;
+            }
+            document.getElementById('demandPotential').innerText = formatNum(totalDeficit);
+            
+            // Тренд
+            let trendEl = document.getElementById('trendLabel');
+            if (avgSupply < NORMATIVE) {
+                trendEl.innerHTML = '📉 Ниже норматива (650 м²/1000 чел.)';
+                trendEl.style.color = '#e67e22';
+            } else {
+                trendEl.innerHTML = '📈 Выше норматива';
+                trendEl.style.color = '#28a745';
+            }
+            
+            // ========== ТАБЛИЦА ==========
+            let tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            for (let i = 0; i < districts.length; i++) {
+                let item = data[districts[i]];
+                let deficit = deficitValues[i];
+                let deficitClass = deficit > 0 ? 'deficit-positive' : (deficit < 0 ? 'deficit-negative' : '');
+                let deficitText = deficit > 0 ? '+' + formatNum(deficit) : (deficit < 0 ? formatNum(deficit) : '0');
+                let supplyText = item.population > 0 ? Math.round((item.totalArea / item.population) * 1000).toLocaleString('ru-RU') : '0';
+                
+                let row = `<tr>
+                    <td><strong>${districts[i]}</strong></td>
+                    <td>${item.count}</td>
+                    <td>${formatNum(item.totalArea)}</td>
+                    <td>${formatNum(item.population)}</td>
+                    <td>${supplyText}</td>
+                    <td class="${deficitClass}">${deficitText}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            }
+            
+            // Задержка для отрисовки canvas
+            setTimeout(() => {
+                // ========== ГРАФИК 1: Торговые площади ==========
+                const canvas1 = document.getElementById('areaChart');
+                if (canvas1) {
+                    const ctx1 = canvas1.getContext('2d');
+                    new Chart(ctx1, {
+                        type: 'bar',
+                        data: {
+                            labels: districtNames,
+                            datasets: [{
+                                label: '',
+                                data: areas,
+                                backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                                borderColor: '#28a745',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { display: false } },
+                            scales: { 
+                                y: { ticks: { color: '#ccc', callback: v => formatNum(v) }, title: { display: true, text: 'м²', color: '#ccc' } },
+                                x: { ticks: { color: '#ccc', maxRotation: 45 } }
+                            }
+                        }
+                    });
+                    console.log('График 1 создан');
+                }
+                
+                // ========== ГРАФИК 2: Обеспеченность ==========
+                const canvas2 = document.getElementById('supplyChart');
+                if (canvas2) {
+                    const ctx2 = canvas2.getContext('2d');
+                    new Chart(ctx2, {
+                        type: 'bar',
+                        data: {
+                            labels: districtNames,
+                            datasets: [
+                                {
+                                    label: 'Обеспеченность (м²/1000 чел)',
+                                    data: supplyValues,
+                                    backgroundColor: 'rgba(52, 208, 88, 0.8)',
+                                    borderWidth: 0
+                                },
+                                {
+                                    label: `Норматив (${NORMATIVE} м²/1000)`,
+                                    data: Array(districtNames.length).fill(NORMATIVE),
+                                    type: 'line',
+                                    borderColor: '#e67e22',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    fill: false,
+                                    pointRadius: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { 
+                                legend: { labels: { color: '#fff' }, position: 'top' } 
+                            },
+                            scales: { 
+                                y: { ticks: { color: '#ccc' }, title: { display: true, text: 'м²/1000 чел', color: '#ccc' } },
+                                x: { ticks: { color: '#ccc', maxRotation: 45 } }
+                            }
+                        }
+                    });
+                    console.log('График 2 создан');
+                }
+                
+                // ========== ГРАФИК 3: Дефицит/профицит ==========
+                const canvas3 = document.getElementById('deficitChart');
+                if (canvas3) {
+                    const ctx3 = canvas3.getContext('2d');
+                    new Chart(ctx3, {
+                        type: 'bar',
+                        data: {
+                            labels: districtNames,
+                            datasets: [{
+                                label: '',
+                                data: deficitValues,
+                                backgroundColor: deficitValues.map(v => v >= 0 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(52, 152, 219, 0.8)'),
+                                borderColor: deficitValues.map(v => v >= 0 ? '#c0392b' : '#2980b9'),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            let val = ctx.raw;
+                                            return val >= 0 ? `Дефицит: ${formatNum(val)} м²` : `Профицит: ${formatNum(-val)} м²`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: { 
+                                y: { ticks: { color: '#ccc', callback: v => formatNum(v) }, title: { display: true, text: 'м²', color: '#ccc' } },
+                                x: { ticks: { color: '#ccc', maxRotation: 45 } }
+                            }
+                        }
+                    });
+                    console.log('График 3 создан');
+                }
+            }, 100);
+            
+            // ========== АНАЛИТИЧЕСКИЙ ВЫВОД ==========
+            let deficitDistricts = [];
+            let surplusDistricts = [];
+            let maxDeficit = { name: '', value: -Infinity };
+            let maxSupply = { name: '', value: -Infinity };
+            
+            for (let i = 0; i < districts.length; i++) {
+                let deficit = deficitValues[i];
+                let supply = supplyValues[i];
+                
+                if (deficit > 0) {
+                    deficitDistricts.push(districts[i]);
+                    if (deficit > maxDeficit.value) {
+                        maxDeficit = { name: districts[i], value: deficit };
+                    }
+                } else if (deficit < 0) {
+                    surplusDistricts.push(districts[i]);
+                }
+                
+                if (supply > maxSupply.value && data[districts[i]].population > 0) {
+                    maxSupply = { name: districts[i], value: supply };
+                }
+            }
+            
+            let insightHtml = '';
+            
+            // Дефицит
+            if (deficitDistricts.length > 0) {
+                insightHtml += `<strong>🔴 Выявлен дефицит торговых площадей</strong><br>`;
+                insightHtml += `Районы с дефицитом: <strong>${deficitDistricts.join(', ')}</strong><br>`;
+                insightHtml += `Суммарный потенциальный спрос: <strong>${formatNum(totalDeficit)} м²</strong><br>`;
+                insightHtml += `Наибольший дефицит в <strong>${maxDeficit.name}</strong> районе (${formatNum(maxDeficit.value)} м²)<br><br>`;
+            } else {
+                insightHtml += `<strong>✅ Обеспеченность соответствует нормативу</strong><br><br>`;
+            }
+            
+            // Профицит
+            if (surplusDistricts.length > 0) {
+                insightHtml += `<strong>🟢 Профицит площадей</strong> в районах: ${surplusDistricts.join(', ')}<br>`;
+                insightHtml += `Наибольшая концентрация ТЦ в <strong>${maxSupply.name}</strong> районе `;
+                insightHtml += `(обеспеченность ${Math.round(maxSupply.value)} м²/1000 чел.)<br><br>`;
+            }
+            
+            // Рекомендации
+            insightHtml += `<strong>📊 Рекомендации по формированию портфеля:</strong><br>`;
+            
+            if (deficitDistricts.includes('Красноармейский район') || deficitDistricts.includes('Кировский район')) {
+                insightHtml += `• Южные районы (Красноармейский, Кировский, Советский) требуют новых ТЦ вдоль Третьей продольной магистрали.<br>`;
+            }
+            if (deficitDistricts.includes('Тракторозаводский район') || deficitDistricts.includes('Краснооктябрьский район')) {
+                insightHtml += `• Северные районы нуждаются в объектах с ориентацией на общественный транспорт (скоростной трамвай).<br>`;
+            }
+            if (deficitDistricts.includes('Центральный район')) {
+                insightHtml += `• Центральный район перспективен для формата "у дома" и специализированных ТЦ.<br>`;
+            }
+            if (surplusDistricts.includes('Дзержинский район')) {
+                insightHtml += `• В Дзержинском районе высокая концентрация (${data['Дзержинский район'].count} ТЦ) — избегайте новых крупных объектов.<br>`;
+            }
+            
+            insightHtml += `<br><strong>🎯 Согласно модели Хаффа:</strong><br>`;
+            insightHtml += `Потребители из зон дефицита готовы преодолевать до 5 км до крупных региональных центров. `;
+            insightHtml += `Оптимальная стратегия — сбалансированная сеть из региональных, районных и локальных объектов.`;
+            
+            document.getElementById('insightText').innerHTML = insightHtml;
+            
+            console.log('Аналитика загружена!');
+        });
+    </script>
+</body>
+</html>
