@@ -11,22 +11,6 @@
     <link href="styles/base_adaptive.css" rel="stylesheet" />
     <link href="styles/analytic.css" rel="stylesheet" />
     <script src="database.js"></script>
-    <style>
-        /* Дополнительные стили для гарантии отображения */
-        .analytic-charts {
-            max-height: none !important;
-            overflow-y: visible !important;
-        }
-        canvas {
-            display: block !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: 250px !important;
-        }
-        .chart-card {
-            min-height: 320px;
-        }
-    </style>
 </head>
 <body>
     <div class="analytic-container">
@@ -109,7 +93,7 @@
                                         <th>Площадь (м²)</th>
                                         <th>Население (чел.)</th>
                                         <th>Обеспеченность</th>
-                                        <th>Дефицит/профицит</th>
+                                        <th>Дефицит / профицит</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody"></tbody>
@@ -128,10 +112,6 @@
     </div>
 
     <script>
-        // ============================================================
-        // ДАННЫЕ (из диссертации)
-        // ============================================================
-        
         // Население по районам (Таблица 7)
         const POPULATION = {
             'Дзержинский район': 184707,
@@ -262,7 +242,7 @@
                 trendEl.style.color = '#28a745';
             }
             
-            // ========== ТАБЛИЦА ==========
+            // Таблица
             let tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
@@ -286,7 +266,7 @@
             
             // Задержка для отрисовки canvas
             setTimeout(() => {
-                // ========== ГРАФИК 1: Торговые площади ==========
+                // ГРАФИК 1: Торговые площади 
                 const canvas1 = document.getElementById('areaChart');
                 if (canvas1) {
                     const ctx1 = canvas1.getContext('2d');
@@ -315,7 +295,7 @@
                     console.log('График 1 создан');
                 }
                 
-                // ========== ГРАФИК 2: Обеспеченность ==========
+                // ГРАФИК 2: Обеспеченность
                 const canvas2 = document.getElementById('supplyChart');
                 if (canvas2) {
                     const ctx2 = canvas2.getContext('2d');
@@ -357,7 +337,7 @@
                     console.log('График 2 создан');
                 }
                 
-                // ========== ГРАФИК 3: Дефицит/профицит ==========
+                // ГРАФИК 3: Дефицит/профицит 
                 const canvas3 = document.getElementById('deficitChart');
                 if (canvas3) {
                     const ctx3 = canvas3.getContext('2d');
@@ -397,7 +377,7 @@
                 }
             }, 100);
             
-            // ========== АНАЛИТИЧЕСКИЙ ВЫВОД ==========
+            // Аналитический вывод
             let deficitDistricts = [];
             let surplusDistricts = [];
             let maxDeficit = { name: '', value: -Infinity };
