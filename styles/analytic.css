@@ -1,0 +1,429 @@
+/* Переопределяем overflow: hidden из base.css */
+html, body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    min-height: 100vh !important;
+}
+
+.analytic-container {
+    min-height: 100vh;
+    background: #212121;
+    color: #ffffff;
+    font-family: 'Geometria', Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: visible !important;
+}
+
+/* Основной контент с прокруткой */
+.analytic-main {
+    flex: 1;
+    padding: 40px 0 60px;
+    overflow: visible !important;
+    width: 100%;
+}
+
+.analytic-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+/* Левая панель KPI */
+.analytic-sidebar {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.kpi-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 28px;
+    padding: 24px 20px;
+    border: 1px solid rgba(40, 167, 69, 0.25);
+    transition: all 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.08);
+}
+
+.kpi-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 12px;
+}
+
+.kpi-value {
+    font-size: 44px;
+    font-weight: 800;
+    color: #28a745;
+    margin-bottom: 6px;
+}
+
+.kpi-unit {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.kpi-trend {
+    margin-top: 12px;
+    font-size: 13px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 12px;
+    border-radius: 40px;
+    display: inline-block;
+}
+
+.kpi-footnote {
+    font-size: 11px;
+    color: #ffffff(255, 255, 255, 0.45);
+    margin-top: 8px;
+}
+
+/* Правая область */
+.analytic-charts {
+    flex: 3;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.chart-card {
+    background: rgba(20, 20, 20, 0.7);
+    border-radius: 28px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chart-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #f0f0f0;
+    border-left: 4px solid #28a745;
+    padding-left: 14px;
+}
+
+/* Контейнер для canvas */
+.chart-card > div {
+    position: relative;
+    height: 300px;
+}
+
+canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Таблица */
+.table-wrapper {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 28px;
+    padding: 8px 0 16px;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+    overflow-x: auto;
+}
+
+.analytic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 680px;
+}
+
+.analytic-table th,
+.analytic-table td {
+    padding: 14px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.analytic-table th {
+    color: #28a745;
+    background: rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.analytic-table tr:hover td {
+    background: rgba(40, 167, 69, 0.08);
+}
+
+.deficit-positive {
+    color: #ff8c6b;
+    font-weight: 600;
+}
+
+.deficit-negative {
+    color: #6bcbff;
+}
+
+/* Инсайт-блок */
+.insight-block {
+    background: linear-gradient(105deg, rgba(40, 167, 69, 0.1) 0%, rgba(30, 30, 40, 0.6) 100%);
+    border-radius: 28px;
+    padding: 20px 28px;
+    border-left: 6px solid #28a745;
+    margin-bottom: 20px;
+}
+
+.insight-block h4 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #28a745;
+}
+
+.insight-block div {
+    line-height: 1.5;
+    font-size: 15px;
+    color: #e0e0e0;
+}
+
+/* Шапка фиксированная */
+.header {
+    position: sticky;
+    top: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(40, 167, 69, 0.4);
+    z-index: 100;
+    width: 100%;
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.header-brand:hover {
+    transform: scale(1.02);
+}
+
+.header-logo {
+    width: 48px;
+    height: 48px;
+    background: #28a745;
+    color: #212121;
+    font-size: 28px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
+}
+
+.header-title {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    background: none;
+    -webkit-text-fill-color: white;
+}
+
+.header-menu {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+}
+
+.header-link {
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    padding-bottom: 5px;
+}
+
+.header-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #28a745;
+    transition: all 0.3s ease;
+}
+
+.header-link:hover {
+    color: #28a745;
+}
+
+.header-link:hover::before {
+    width: 100%;
+}
+
+.header-link span {
+    color: #28a745;
+    font-weight: bold;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .analytic-layout {
+        padding: 0 30px;
+    }
+}
+
+@media (max-width: 992px) {
+    .analytic-layout {
+        flex-direction: column;
+        padding: 0 25px;
+    }
+    
+    .analytic-sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .kpi-card {
+        flex: 1;
+        min-width: 180px;
+    }
+    
+    .header-inner {
+        padding: 10px 25px;
+        flex-wrap: wrap;
+    }
+    
+    .header-menu {
+        gap: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytic-main {
+        padding: 20px 0 40px;
+    }
+    
+    .analytic-layout {
+        padding: 0 20px;
+    }
+    
+    .kpi-value {
+        font-size: 34px;
+    }
+    
+    .chart-title {
+        font-size: 16px;
+    }
+    
+    .chart-card > div {
+        height: 250px;
+    }
+    
+    .header-title {
+        font-size: 20px;
+    }
+    
+    .header-logo {
+        width: 45px;
+        height: 45px;
+        font-size: 26px;
+    }
+    
+    .header-menu {
+        gap: 25px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .analytic-sidebar {
+        flex-direction: column;
+    }
+    
+    .kpi-card {
+        min-width: 100%;
+    }
+    
+    .header-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .header-title {
+        font-size: 18px;
+    }
+    
+    .header-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+    
+    .header-menu {
+        gap: 20px;
+    }
+    
+    .kpi-value {
+        font-size: 28px;
+    }
+    
+    .chart-card > div {
+        height: 220px;
+    }
+    
+    .analytic-table th,
+    .analytic-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .analytic-layout {
+        padding: 0 15px;
+    }
+}
+
+/* Стилизация скроллбара */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #28a745;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #1f7a37;
+}
