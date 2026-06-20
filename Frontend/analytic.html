@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Аналитика спроса — TradeMap</title>
+    <link href="styles/analytic.css" rel="stylesheet" />
+    <link href="styles/analytic_adaptive.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="analytic-container">
+        <header class="header">
+            <div class="header-inner">
+                <a class="header-brand" href="index.html">
+                    <div class="header-logo">T</div>
+                    <div class="header-title">radeMap</div>
+                </a>
+                <nav class="header-menu">
+                    <a class="header-link" href="./map.html">Карта <span>объектов</span></a>
+                    <a class="header-link active" href="./analytic.html">Аналитика <span>спроса</span></a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="analytic-main">
+            <div class="analytic-layout">
+                
+                <!-- БЛОК 1: Таблица 12 -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📊 Таблица 12 – Градация районов Волгограда по потенциалу развития торговой инфраструктуры</h2>
+                        <p>Индекс потенциала (lᵢ) рассчитан по гибридной модели Хаффа с учетом «мёртвых зон» и гравитационного влияния ТЦ</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="priority-table">
+                            <thead>
+                                <tr><th>Район</th><th>Население, чел.</th><th>Доля «мёртвых зон» (Dᵢ)</th><th>Кол-во ТЦ</th><th>Индекс потенциала (lᵢ)</th><th>Уровень приоритета</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="table-text-white">Тракторозаводский</td><td class="table-text-white">134 223</td><td class="table-text-white">0,05</td><td class="table-text-white">2</td><td class="table-text-white">0,31</td><td><span class="priority-low">Низкий</span></td></tr>
+                                <tr><td class="table-text-white">Краснооктябрьский</td><td class="table-text-white">146 649</td><td class="table-text-white">0,05</td><td class="table-text-white">2</td><td class="table-text-white">0,28</td><td><span class="priority-low">Низкий</span></td></tr>
+                                <tr><td class="table-text-white">Дзержинский</td><td class="table-text-white">188 903</td><td class="table-text-white">0,01</td><td class="table-text-white">6</td><td class="table-text-white">0,09</td><td><span class="priority-low">Низкий</span></td></tr>
+                                <tr><td class="table-text-white">Центральный</td><td class="table-text-white">84 853</td><td class="table-text-white">0,02</td><td class="table-text-white">2</td><td class="table-text-white">0,15</td><td><span class="priority-low">Низкий</span></td></tr>
+                                <tr><td class="table-text-white">Ворошиловский</td><td class="table-text-white">79 637</td><td class="table-text-white">0,10</td><td class="table-text-white">1</td><td class="table-text-white">0,42</td><td><span class="priority-medium">Средний</span></td></tr>
+                                <tr><td class="table-text-white">Советский</td><td class="table-text-white">131 734</td><td class="table-text-white">0,15</td><td class="table-text-white">3</td><td class="table-text-white">0,45</td><td><span class="priority-medium">Средний</span></td></tr>
+                                <tr><td class="table-text-white">Кировский</td><td class="table-text-white">98 162</td><td class="table-text-white">0,72</td><td class="table-text-white">1</td><td class="table-text-white">0,79</td><td><span class="priority-high">Высокий</span></td></tr>
+                                <tr><td class="table-text-white">Красноармейский</td><td class="table-text-white">163 875</td><td class="table-text-white">0,85</td><td class="table-text-white">1</td><td class="table-text-white">0,87</td><td><span class="priority-high">Высокий</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- БЛОК 2: Круговая диаграмма + выводы -->
+                <div class="double-grid">
+                    <div class="chart-box">
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                <span></span> 
+                                📌 Диаграмма распределения причин образования мёртвых зон
+                            </div>
+                            <div class="pie-canvas-container">
+                                <canvas id="deadZonesChart" width="500" height="280"></canvas>
+                            </div>
+                            <div class="stats-row">
+                                <div class="stat-badge">
+                                    <div class="stat-color-indicator red"></div>
+                                    <div class="stat-number">55%</div>
+                                    <div class="stat-label">Неравномерное размещение тц</div>
+                                </div>
+                                <div class="stat-badge">
+                                    <div class="stat-color-indicator blue"></div>
+                                    <div class="stat-number">45%</div>
+                                    <div class="stat-label">Географические барьеры</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-box">
+                        <div class="insight-block">
+                            <h3>🔍 Ключевые выводы</h3>
+                            <div class="insight-list">
+                                <div class="insight-item">
+                                    <div class="insight-marker">1</div>
+                                    <div>Выявлено, что <strong>55% «мёртвых зон»</strong> образуется из-за неравномерного распределения торговых объектов. В Красноармейском и Кировском районах, где проживает более 260 тыс. человек, функционирует всего по 1 тц, что создаёт искусственный дефицит торговой инфраструктуры.</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-marker">2</div>
+                                    <div><strong>45% «мёртвых зон»</strong> обусловлены действием пространственных барьеров: река Волга, овраги, промышленные зоны и железнодорожные пути. Эти преграды физически изолируют отдельные территории, делая их малодоступными для существующих тц.</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-marker">3</div>
+                                    <div>Сеточный анализ с порогом доступности 5 км показал, что доля территории Волгограда, относящаяся к «мёртвым зонам», составляет <strong>37,5%</strong> (289 узлов сетки из 770). При этом 49 таких зон локализованы в Красноармейском районе и 21 — в Кировском.</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-marker">4</div>
+                                    <div><strong>Рекомендация по учёту барьеров:</strong> целесообразно возводить 2 объекта торговли меньшей площади и стоимости в разных локациях, разделённых природными барьерами или значительными расстояниями, вместо 1 крупного тц.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- БЛОК 3: Стратегические рекомендации -->
+                <div class="section-card strategy-card">
+                    <div class="section-header">
+                        <h2>📌 Стратегические рекомендации по формированию портфеля торговых площадок</h2>
+                    </div>
+                    <div class="strategy-content">
+                        <div class="insight-item">
+                            <strong class="priority-high-text">🔴 Высокий приоритет:</strong>
+                            Для Красноармейского и Кировского района признано оптимальным создание крупного тц регионального значения с площадью 40–60 тыс. м². Существующий тц «Юбилейный» в Красноармейском районе не соответствует современным стандартам торгово-развлекательных объектов. В Кировском районе рекомендуется комплексная модернизация функционирующего тц «Космос» с ориентацией на максимальную пешеходную доступность в центральной части района.
+                        </div>
+                        <div class="insight-item">
+                            <strong class="priority-medium-text">🟠 Средний приоритет:</strong>
+                            Возведение крупных тц в Ворошиловском и Советском районе признано нецелесообразным из-за риска конкурентного перераспределения спроса. Данные районы уже обеспечены мощными региональными тц («Акварель», «Зелёное кольцо», «Ворошиловский»). Оптимальная стратегия — точечное развитие объектов локального формата в пределах идентифицированных «мёртвых зон» внутри жилых кварталов.
+                        </div>
+                        <div class="insight-item">
+                            <strong class="priority-low-text">🟢 Низкий приоритет:</strong>
+                            Рынок торговой недвижимости в Дзержинском, Краснооктябрьском, Тракторнозаводском и Центральном районах перенасыщен. В Дзержинском районе функционирует 6 тц при минимальной доле «мёртвых зон» (Dᵢ=0,01). Реализация новых строительных проектов потребует значительных маркетинговых усилий и приведет к каннибализации клиентских потоков. Стратегическая рекомендация — отказ от капитального строительства в пользу реконструкции, изменения концепции позиционирования и оптимизации арендной политики существующих тц.
+                        </div>
+                        <div class="insight-item">
+                            <strong>Оценка экономического эффекта с использованием модели Хаффа:</strong>
+                            При открытии нового тц площадью 50 000 м² в Красноармейском районе, вероятность его выбора составит 0,909 по сравнению с 0,091 для существующего тц «Юбилейный». Это говорит о значительном перераспределении расчётных потребительских предпочтений в пользу нового объекта при его размещении расположении с жилыми кварталами (с сетевым расстоянием до жилой зоны 2 км).
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('deadZonesChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Неравномерное размещение ТЦ', 'Географические барьеры'],
+                datasets: [{
+                    data: [55, 45],
+                    backgroundColor: ['#e74c3c', '#3498db'],
+                    borderColor: 'rgba(0,0,0,0.2)',
+                    borderWidth: 2,
+                    hoverOffset: 12,
+                    borderRadius: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#1a1a1a',
+                        titleColor: '#28a745',
+                        bodyColor: '#fff',
+                        borderColor: '#28a745',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a,b) => a + b, 0);
+                                const percent = ((value / total) * 100).toFixed(1);
+                                let extraInfo = '';
+                                if (label === 'Неравномерное размещение ТЦ') {
+                                    extraInfo = ` (≈ ${Math.round(289 * 0.55)} узлов сетки из 289)`;
+                                } else {
+                                    extraInfo = ` (≈ ${Math.round(289 * 0.45)} узлов из-за реки, промзон и ЖД)`;
+                                }
+                                return `${label}: ${value}% (${percent}% от всех мёртвых зон${extraInfo})`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                animation: { animateRotate: true, duration: 1000 }
+            }
+        });
+    </script>
+</body>
+</html>

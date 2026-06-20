@@ -1,0 +1,329 @@
+/* Планшеты (768px - 1024px) */
+@media (max-width: 1024px) {
+    .analytic-layout {
+        padding: 0 30px;
+        gap: 30px;
+    }
+    
+    .section-header h2 {
+        font-size: 20px;
+    }
+    
+    .priority-table th,
+    .priority-table td {
+        padding: 12px 8px;
+        font-size: 13px;
+    }
+    
+    .chart-title {
+        font-size: 16px;
+    }
+    
+    .insight-block h3 {
+        font-size: 18px;
+    }
+    
+    .insight-item {
+        font-size: 13px;
+    }
+}
+
+/* Планшеты (вертикальная ориентация) и маленькие ноутбуки (до 900px) */
+@media (max-width: 900px) {
+    .double-grid {
+        flex-direction: column;
+    }
+    
+    .analytic-layout {
+        padding: 0 20px;
+    }
+    
+    .stats-row {
+        gap: 16px;
+    }
+    
+    .stat-badge {
+        padding: 8px 16px;
+        min-width: 140px;
+    }
+    
+    .stat-number {
+        font-size: 22px;
+    }
+    
+    .header-inner {
+        padding: 0 20px;
+    }
+    
+    .header-brand {
+        gap: 20px;
+    }
+    
+    .header-logo {
+        width: 45px;
+        height: 45px;
+        font-size: 28px;
+        border-radius: 15px;
+    }
+    
+    .header-title {
+        font-size: 22px;
+    }
+    
+    .header-menu {
+        gap: 30px;
+    }
+    
+    .header-link {
+        font-size: 16px;
+    }
+    
+    /* Уменьшаем отступы между блоками выводов */
+    .insight-list {
+        gap: 14px;
+    }
+    
+    .strategy-content {
+        gap: 16px;
+        padding-bottom: 24px;
+    }
+}
+
+/* Мобильные устройства (до 768px) */
+@media (max-width: 768px) {
+    .analytic-main {
+        padding: 25px 0 40px;
+    }
+    
+    .analytic-layout {
+        padding: 0 16px;
+        gap: 24px;
+    }
+    
+    .section-header {
+        padding: 18px 20px 10px 20px;
+    }
+    
+    .section-header h2 {
+        font-size: 18px;
+    }
+    
+    .section-header p {
+        font-size: 12px;
+    }
+    
+    .priority-table th,
+    .priority-table td {
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+    
+    .priority-table th:first-child,
+    .priority-table td:first-child {
+        padding-left: 16px;
+    }
+    
+    .priority-table th:last-child,
+    .priority-table td:last-child {
+        padding-right: 16px;
+    }
+    
+    .priority-high, .priority-medium, .priority-low {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+    
+    .chart-card {
+        padding: 18px;
+    }
+    
+    .chart-title {
+        font-size: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .chart-title span {
+        width: 6px;
+        height: 22px;
+    }
+    
+    .pie-canvas-container {
+        margin: 5px auto;
+    }
+    
+    #deadZonesChart {
+        max-height: 220px;
+    }
+    
+    .stats-row {
+        gap: 12px;
+        margin-top: 12px;
+    }
+    
+    .stat-badge {
+        padding: 8px 12px;
+        min-width: 120px;
+    }
+    
+    .stat-number {
+        font-size: 20px;
+    }
+    
+    .stat-label {
+        font-size: 11px;
+    }
+    
+    .stat-color-indicator {
+        width: 12px;
+        height: 12px;
+        margin-right: 6px;
+    }
+    
+    .insight-block {
+        padding: 20px;
+    }
+    
+    .insight-block h3 {
+        font-size: 17px;
+        margin-bottom: 14px;
+    }
+    
+    /* Уменьшаем отступы между пунктами в ключевых выводах */
+    .insight-list {
+        gap: 12px;
+    }
+    
+    .insight-item {
+        font-size: 12px;
+        gap: 10px;
+    }
+    
+    .insight-marker {
+        font-size: 15px;
+        min-width: 24px;
+    }
+    
+    .strategy-content {
+        padding: 8px 20px 20px 20px;
+        gap: 14px;
+    }
+    
+    .strategy-content .insight-item {
+        font-size: 12px;
+    }
+    
+    /* Хедер для мобильных */
+    .header-inner {
+        padding: 0 16px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .header-brand {
+        gap: 12px;
+    }
+    
+    .header-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+        border-radius: 12px;
+    }
+    
+    .header-title {
+        font-size: 18px;
+        margin-bottom: 0;
+        margin-top: 0;
+    }
+    
+    .header-menu {
+        gap: 25px;
+    }
+    
+    .header-link {
+        font-size: 14px;
+    }
+}
+
+/* Очень маленькие экраны (до 480px) */
+@media (max-width: 480px) {
+    .analytic-layout {
+        padding: 0 12px;
+        gap: 20px;
+    }
+    
+    .section-header {
+        padding: 14px 16px 8px 16px;
+    }
+    
+    .section-header h2 {
+        font-size: 16px;
+    }
+    
+    .priority-table th,
+    .priority-table td {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+    
+    .priority-table th:first-child,
+    .priority-table td:first-child {
+        padding-left: 12px;
+    }
+    
+    .priority-table th:last-child,
+    .priority-table td:last-child {
+        padding-right: 12px;
+    }
+    
+    .chart-card {
+        padding: 14px;
+    }
+    
+    .chart-title {
+        font-size: 14px;
+    }
+    
+    .insight-block {
+        padding: 16px;
+        border-left-width: 4px;
+    }
+    
+    .insight-block h3 {
+        font-size: 16px;
+    }
+    
+    /* Максимально компактные отступы */
+    .insight-list {
+        gap: 10px;
+    }
+    
+    .strategy-content {
+        padding: 8px 16px 16px 16px;
+        gap: 12px;
+    }
+    
+    .stats-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .stat-badge {
+        text-align: center;
+    }
+    
+    /* Хедер для очень маленьких экранов */
+    .header-inner {
+        flex-direction: column;
+        padding: 12px 16px;
+    }
+    
+    .header-brand {
+        align-items: center;
+    }
+    
+    .header-menu {
+        margin-left: 0;
+        gap: 35px;
+    }
+}
