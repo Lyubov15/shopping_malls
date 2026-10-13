@@ -1,0 +1,1656 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
+    <title>Карта объектов</title>
+
+    <!-- Подключение стилей Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <link href="styles/base.css" rel="stylesheet" />
+    <link href="styles/base_adaptive.css" rel="stylesheet" />
+    <link href="styles/map.css" rel="stylesheet" />
+    <link href="styles/map_adaptive.css" rel="stylesheet" />
+</head>
+
+<body>
+    <header class="header">
+        <div class="container header-inner">
+            <a class="header-brand" href="index.html">
+                <div class="header-logo">T</div>
+                <div class="header-title">radeMap</div>
+            </a>
+            <nav class="header-menu">
+                <a class="header-link" href="./map.html">Карта <span>объектов</span></a>
+                <a class="header-link" href="./analytic.html">Аналитика <span>спроса</span></a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- контейнер с картой -->
+    <div id="map" style="height: 100vh;"></div>
+    <div id="info"
+        style="position:absolute;top:92px;right:24px;z-index:1100;padding:10px 14px;background:rgba(255,255,255,0.92);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.16);font-size:14px;max-width:320px;line-height:1.4;color:#222;">
+    </div>
+
+    <!-- Кнопка для скрытия/показа боковой панели на мобильных -->
+    <button id="sidebarToggle" class="sidebar-toggle" aria-label="Переключить боковую панель">
+        <span class="toggle-icon">☰</span>
+    </button>
+
+    <!-- боковая панель -->
+    <aside class="main" id="sidebar">
+        <div class="main-header">
+            <div class="main-title">Рассчитать путь</div>
+            <div class="main-text">Выберите параметры для расчёта пути</div>
+        </div>
+        <div class="main-content">
+            <div class="main-fields">
+                <div class="main-block-title">Маршрут</div>
+
+                <div class="main-field" id="fromField">
+                    <img src="images/Icon.png" class="input-icon" alt="Откуда" />
+                    <input id="from" placeholder="Откуда: начните вводить адрес" autocomplete="off" />
+                    <div class="main-ac" id="fromAc" role="listbox" aria-label="Подсказки адресов"></div>
+                </div>
+
+                <div class="main-field" id="toField">
+                    <img src="images/Icon(1).png" class="input-icon" alt="Куда" />
+                    <input id="to" placeholder="Куда: начните вводить адрес" autocomplete="off" />
+                    <div class="main-ac" id="toAc" role="listbox" aria-label="Подсказки адресов"></div>
+                </div>
+
+                <!-- Фильтры по районам -->
+                <div id="tc-filters" class="filters">
+                    <div class="filter-section" id="districtFilter">
+                        <div class="filter-title">Районы</div>
+                        <div class="filter-actions">
+                            <button type="button" id="selectAllDistricts" class="small-btn">Выбрать все</button>
+                            <button type="button" id="resetDistricts" class="small-btn">Сбросить</button>
+                        </div>
+                        <div id="districtCheckboxes" class="checkbox-list"></div>
+                    </div>
+                </div>
+
+                <!-- Кнопки управления -->
+                <button type="button" id="toggleObstacles" class="toggle-btn" aria-pressed="false">
+                    Пространственные барьеры
+                </button>
+                <button type="button" id="toggleInfluence" class="toggle-btn" aria-pressed="false">
+                    Зоны влияния
+                </button>
+                <button type="button" id="togglePlace" class="toggle-btn" aria-pressed="false">
+                    Добавить потенциальный ТЦ
+                </button>
+                <button type="button" id="toggleGrid" class="toggle-btn" aria-pressed="false">
+                    Аналитическая сетка
+                </button>
+                <button type="button" id="toggleCompetition" class="toggle-btn" aria-pressed="false">
+                    Интенсивность конкуренции
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Библиотека для интерактивных карт -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Рассчитать расстояние между двумя координатам -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <!-- Визуализация диаграмм Вороного -->
+    <script src="https://d3js.org/d3-delaunay.v6.min.js"></script>
+    <!-- Подключение скриптов -->
+    <script src="database.js"></script>
+    <!-- библиотека для расчёта диаграмм Вороного (внешний файл) -->
+    <script src="Voronoi.js"></script>
+    <script>
+        // Глобальные переменные
+        let map;                             // главный объект карты
+        let mallGroup;                       // группа слоёв с ТЦ
+        let obstacleLayer = null;            // слой препятствий (реки, парки, нельзя строить)
+        let obstaclesVisible = false;        // показаны ли препятствия сейчас
+        let obstaclesLoaded = false;         // загружены ли данные препятствий
+        let obstaclesLoading = null;         // промис загрузки препятствий
+        let oblastLayer = null;              // слой для границы области
+        let oblastLoaded = false;            // загружена ли граница области
+        let oblastGeo = null;                // raw geojson объекта области
+        let allMarkers = [];                 // массив всех маркеров на карте
+        let influenceLayer = null;           // слой для зон влияния ТЦ
+        let volgograd_boundaries = null;     // административные границы Волгограда
+        let bordersLoaded = false;           // загружены ли границы города
+        let placeMode = false;               // режим добавления нового ТЦ
+
+        let gridLayer = null;                // слой гексагональной/квадратной сетки
+        let gridVisible = false;             // показана ли сетка
+        let gridLoaded = false;              // загружена ли сетка
+        let competitionLayer = null;         // слой тепловой карты конкуренции
+        let competitionVisible = false;      // показан ли слой конкуренции
+        let deadZoneLayer = null;            // слой мёртвых зон (не охвачены ТЦ)
+        let deadZoneVisible = false;         // показан ли слой мёртвых зон
+        let routeLayer = null;               // линия построенного маршрута
+        let fromCoords = null;               // координаты начальной точки маршрута
+        let toCoords = null;                 // координаты конечной точки маршрута
+
+        // Вспомогательная функция для отображения сообщений (при удалении элемента возвращается в консоль)
+        function setInfo(message) {
+            const el = document.getElementById('info');
+            if (el) {
+                el.innerHTML = message;
+            } else {
+                console.log(message);
+            }
+        }
+
+        // Инициализация карты и создание маркеров
+        document.addEventListener('DOMContentLoaded', () => {
+            // Инициализация карты OpenStreetMap
+            map = L.map('map').setView([48.711667, 44.513889], 10);
+
+            // Подключение тайлов OSM
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> участники',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Создание группы для маркеров ТЦ
+            mallGroup = L.layerGroup().addTo(map);
+
+            // Загружаем GeoJSON файл с препятствиями
+            loadObstaclesGeoJSON();
+            // Загружаем GeoJSON файл с границей области
+            loadOblastGeoJSON();
+
+            // Загружаем административные границы Волгограда
+            if (window.loadAreaGeoJSON) {
+                loadAreaGeoJSON('Волгоград').then(geojson => {
+                    volgograd_boundaries = geojson;
+                    bordersLoaded = true;
+                    console.log('Границы Волгограда загружены');
+                }).catch(error => {
+                    console.warn('Не удалось загрузить границы Волгограда:', error);
+                    bordersLoaded = false;
+                });
+            }
+
+            // Создаём маркеры торговых центров 
+            if (window.shoppingCenters && window.shoppingCenters.length > 0) {
+                console.log('Загружено ТЦ:', window.shoppingCenters.length);
+
+                window.shoppingCenters.forEach((sc) => {
+                    // Создаём синий маркер для торгового центра
+                    const blueIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #3388ff; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
+                    });
+
+                    const marker = L.marker([sc.lat, sc.lng], {
+                        icon: blueIcon,
+                    }).bindPopup(
+                        `<b>${sc.name}</b><br>${sc.address}<br>${sc.district}`
+                    );
+
+                    // Добавляем свойства для фильтрации
+                    marker.district = sc.district;
+                    marker.id = sc.id || sc.name;
+
+                    // Сохраняем маркер в массив
+                    allMarkers.push(marker);
+                });
+
+                // Маркеры не показываем до выбора района
+            } else {
+                console.error('shoppingCenters не найден или пуст');
+            }
+
+            // Заполнение списка районов
+            function populateDistricts() {
+                const names = [
+                    'Тракторозаводский район',
+                    'Краснооктябрьский район',
+                    'Дзержинский район',
+                    'Центральный район',
+                    'Ворошиловский район',
+                    'Советский район',
+                    'Кировский район',
+                    'Красноармейский район'
+                ];
+                const container = document.getElementById('districtCheckboxes');
+                if (container) {
+                    container.innerHTML = ''; // Очищаем контейнер
+                    names.forEach(n => {
+                        const label = document.createElement('label');
+                        label.style.display = 'block';
+                        label.style.margin = '5px 0';
+                        label.innerHTML = `<input type="checkbox" value="${n}" style="margin-right: 5px;"> ${n}`;
+                        container.appendChild(label);
+                    });
+                }
+            }
+
+            populateDistricts();
+
+            // Обработчики для полей маршрута
+            const fromInput = document.getElementById('from');
+            const toInput = document.getElementById('to');
+            if (fromInput) {
+                fromInput.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (value.length === 0) {
+                        // При очистке поля - очищаем координаты и маршрут
+                        fromCoords = null;
+                        clearRoute();
+                    } else {
+                        handleAddressInput(value, 'from');
+                    }
+                });
+
+                // Закрываем подсказки при потере фокуса
+                fromInput.addEventListener('blur', () => {
+                    setTimeout(() => hideSuggestions('from'), 200);
+                });
+
+                // Показываем подсказки при фокусе если там есть текст
+                fromInput.addEventListener('focus', () => {
+                    if (fromInput.value.length > 0) {
+                        handleAddressInput(fromInput.value, 'from');
+                    }
+                });
+            }
+
+            if (toInput) {
+                toInput.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (value.length === 0) {
+                        // При очистке поля - очищаем координаты и маршрут
+                        toCoords = null;
+                        clearRoute();
+                    } else {
+                        handleAddressInput(value, 'to');
+                    }
+                });
+
+                // Закрываем подсказки при потере фокуса
+                toInput.addEventListener('blur', () => {
+                    setTimeout(() => hideSuggestions('to'), 200);
+                });
+
+                // Показываем подсказки при фокусе если там есть текст
+                toInput.addEventListener('focus', () => {
+                    if (toInput.value.length > 0) {
+                        handleAddressInput(toInput.value, 'to');
+                    }
+                });
+            }
+
+            // Обработчики событий фильтров
+            const districtCheckboxes = document.getElementById('districtCheckboxes');
+            if (districtCheckboxes) {
+                districtCheckboxes.addEventListener('change', filterMarkersByDistrict);
+            }
+
+            document.getElementById('selectAllDistricts')?.addEventListener('click', () => {
+                document.querySelectorAll('#districtCheckboxes input').forEach(i => i.checked = true);
+                filterMarkersByDistrict();
+            });
+
+            document.getElementById('resetDistricts')?.addEventListener('click', () => {
+                document.querySelectorAll('#districtCheckboxes input').forEach(i => i.checked = false);
+                filterMarkersByDistrict();
+            });
+
+            // Обработчик для кнопки "Пространственные барьеры"
+            const obstaclesBtn = document.getElementById('toggleObstacles');
+            if (obstaclesBtn) {
+                obstaclesBtn.addEventListener('click', toggleObstacles);
+            }
+
+            // обработчик клика карты для добавления нового ТЦ в режиме размещения
+            map.on('click', onMapClickAddMall);
+            initGridSystem();
+
+            // Обработчики для других кнопок
+            document.getElementById('toggleInfluence')?.addEventListener('click', () => {
+                const btn = document.getElementById('toggleInfluence');
+
+                if (influenceLayer && map.hasLayer(influenceLayer)) {
+                    map.removeLayer(influenceLayer);
+                    if (oblastLayer && map.hasLayer(oblastLayer)) {
+                        map.removeLayer(oblastLayer);
+                    }
+                    btn.textContent = 'Зоны влияния';
+                    btn.classList.remove('is-on');
+                    btn.setAttribute('aria-pressed', 'false');
+                    setInfo('Зоны влияния скрыты');
+                    influenceLayer = null;
+                    return;
+                }
+
+                setInfo('Идёт расчёт зон влияния для видимых ТЦ...');
+                updateVoronoiZones();
+            });
+
+            document.getElementById('togglePlace')?.addEventListener('click', () => {
+                console.log('togglePlace clicked, current placeMode:', placeMode);
+                placeMode = !placeMode;
+                const btn = document.getElementById('togglePlace');
+                if (placeMode) {
+                    btn.textContent = 'Остановить размещение';
+                    btn.classList.add('is-on');
+                    btn.setAttribute('aria-pressed', 'true');
+                    setInfo('Режим размещения включен. Кликните на карте, чтобы добавить новый ТЦ.');
+                } else {
+                    btn.textContent = 'Добавить потенциальный ТЦ';
+                    btn.classList.remove('is-on');
+                    btn.setAttribute('aria-pressed', 'false');
+                    setInfo('Режим размещения выключен.');
+                }
+                console.log('new placeMode:', placeMode);
+            });
+
+            document.getElementById('toggleCompetition')?.addEventListener('click', toggleCompetition);
+
+            // Обработчик для кнопки "Аналитическая сетка"
+            document.getElementById('toggleGrid')?.addEventListener('click', toggleGrid);
+        });
+
+        // Функция загрузки препятствий
+        function loadObstaclesGeoJSON() {
+            if (obstaclesLoading) {
+                return obstaclesLoading;
+            }
+
+            obstaclesLoading = fetch('obstacles.geojson', { cache: 'no-cache' })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (!data.type || data.type !== 'FeatureCollection') {
+                        throw new Error('Файл не является корректным GeoJSON FeatureCollection');
+                    }
+
+                    if (!data.features || data.features.length === 0) {
+                        console.warn('GeoJSON не содержит объектов');
+                        obstaclesLoaded = true;
+                        return;
+                    }
+
+                    obstacleLayer = L.geoJSON(data, {
+                        style: {
+                            fillColor: '#191970',
+                            color: '#0000CD',
+                            weight: 2,
+                            fillOpacity: 0.3
+                        },
+                        pointToLayer: function (feature, latlng) {
+                            // Не рисуем точечные объекты из препятствий
+                            return null;
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on('click', () => {
+                                const props = feature.properties || {};
+                                let infoText = '<strong>Препятствие</strong><br>';
+                                if (Object.keys(props).length > 0) {
+                                    infoText += Object.entries(props)
+                                        .map(([key, value]) => `${key}: ${value}`)
+                                        .join('<br>');
+                                } else {
+                                    infoText += 'Нет дополнительной информации';
+                                }
+                                setInfo(infoText);
+                            });
+                        }
+                    });
+
+                    obstaclesLoaded = true;
+                    console.log(`Препятствия загружены: ${data.features.length} объектов`);
+                    console.log('Препятствия готовы к отображению');
+                })
+                .catch((error) => {
+                    console.error('Ошибка загрузки препятствий:', error);
+                    setInfo(`Ошибка загрузки препятствий: ${error.message}`);
+                    obstaclesLoaded = false;
+                })
+                .finally(() => {
+                    obstaclesLoading = null;
+                });
+
+            return obstaclesLoading;
+        }
+
+        // Функция загрузки границы области из oblast.geojson
+        function loadOblastGeoJSON() {
+            fetch('oblast.geojson')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (!data.type || data.type !== 'FeatureCollection') {
+                        throw new Error('Файл области не является корректным GeoJSON FeatureCollection');
+                    }
+                    oblastGeo = data; // Сохраните необработанные материалы
+                    oblastLayer = L.geoJSON(data, {
+                        style: {
+                            color: '#FF4500',
+                            weight: 2,
+                            dashArray: '5,5',
+                            fillOpacity: 0
+                        }
+                    });
+                    oblastLoaded = true;
+                    console.log('Граница области загружена');
+                })
+                .catch((error) => {
+                    console.error('Ошибка загрузки границы области:', error);
+                });
+        }
+
+        function debounce(fn, timeout) {
+            let timer = null;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), timeout);
+            };
+        }
+
+        // Инициализация системы сетки
+        function initGridSystem() {
+            map.on('zoomend', onZoomEnd);
+        }
+
+        // Генерация адаптивной сетки 
+        function generateAdaptiveGrid() {
+            if (!window.turf || !oblastGeo) {
+                console.warn('Turf или граница не загружены');
+                return Promise.resolve();
+            }
+
+            const zoom = map.getZoom();
+
+            let cellSizeKm;
+            if (zoom <= 11) cellSizeKm = 2.0;
+            else if (zoom <= 12) cellSizeKm = 1.2;
+            else if (zoom <= 13) cellSizeKm = 0.8;
+            else if (zoom <= 14) cellSizeKm = 0.5;
+            else if (zoom <= 15) cellSizeKm = 0.3;
+            else if (zoom <= 16) cellSizeKm = 0.15;
+            else cellSizeKm = 0.08;
+
+            const oblastPolygon = getOblastPolygon(oblastGeo);
+            if (!oblastPolygon) return Promise.resolve();
+
+            const bbox = window.turf.bbox(oblastPolygon);
+            let grid = window.turf.squareGrid(bbox, cellSizeKm, { units: 'kilometers' });
+
+            if (grid.features.length > 2000) {
+                cellSizeKm *= 1.5;
+                grid = window.turf.squareGrid(bbox, cellSizeKm, { units: 'kilometers' });
+            }
+
+            const clippedFeatures = [];
+            grid.features.forEach(cell => {
+                const clipped = window.turf.intersect(cell, oblastPolygon);
+                if (clipped) {
+                    clipped.properties = {
+                        zoom: zoom,
+                        area: window.turf.area(clipped),
+                        center: window.turf.centroid(clipped).geometry.coordinates
+                    };
+                    clippedFeatures.push(clipped);
+                }
+            });
+
+            if (clippedFeatures.length === 0) return Promise.resolve();
+
+            const gridFC = window.turf.featureCollection(clippedFeatures);
+
+            if (gridLayer && map.hasLayer(gridLayer)) {
+                map.removeLayer(gridLayer);
+            }
+
+            gridLayer = L.geoJSON(gridFC, {
+                style: {
+                    color: '#3169b8',
+                    weight: 0.8,
+                    opacity: 0.6,
+                    fillColor: '#3169b8',
+                    fillOpacity: 0.08
+                },
+                onEachFeature: (feature, layer) => {
+                    if (feature.properties) {
+                        const areaHa = (feature.properties.area / 10000).toFixed(1);
+                        layer.bindTooltip(`Ячейка ${areaHa} га`, { sticky: true });
+                    }
+                }
+            });
+
+            if (gridVisible) {
+                gridLayer.addTo(map);
+                addGridCircles();
+            }
+
+            gridLoaded = true;
+            setInfo(`Сетка: ${clippedFeatures.length} ячеек (${cellSizeKm} км, zoom ${zoom})`);
+
+            return Promise.resolve();
+        }
+
+        let gridDebounceTimer = null;
+
+        // Слой для красных кружков (центры ячеек сетки)
+        let gridCirclesLayer = null;
+
+        // Функция создания красных кружков в углах ячеек сетки 
+        function addGridCircles() {
+            // Удаляем старый слой если есть
+            if (gridCirclesLayer && map.hasLayer(gridCirclesLayer)) {
+                map.removeLayer(gridCirclesLayer);
+            }
+
+            if (!gridLayer || !gridVisible) return;
+
+            const features = getGridFeatures(gridLayer);
+            if (!features.length) return;
+
+            // Используем Set для уникальных координат (чтобы не дублировать кружки)
+            const uniquePoints = new Map(); // ключ "lat,lng" -> координаты
+
+            features.forEach(cell => {
+                if (!cell || !cell.geometry) return;
+
+                // Получаем все вершины полигона
+                let coords = [];
+
+                if (cell.geometry.type === 'Polygon') {
+                    // Внешнее кольцо полигона
+                    coords = cell.geometry.coordinates[0];
+                } else if (cell.geometry.type === 'MultiPolygon') {
+                    // Для MultiPolygon берём первый полигон
+                    coords = cell.geometry.coordinates[0][0];
+                }
+
+                // Добавляем каждую вершину в Set
+                coords.forEach(coord => {
+                    // coord = [lng, lat]
+                    const lng = coord[0];
+                    const lat = coord[1];
+                    const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+                    if (!uniquePoints.has(key)) {
+                        uniquePoints.set(key, { lat, lng });
+                    }
+                });
+            });
+
+            // Создаём кружки для всех уникальных вершин
+            const circles = [];
+
+            uniquePoints.forEach(point => {
+                const circle = L.circleMarker([point.lat, point.lng], {
+                    radius: 4,
+                    color: '#ff0000',
+                    fillColor: '#ff0000',
+                    fillOpacity: 0.9,
+                    weight: 1,
+                    opacity: 0.9
+                });
+
+                // Добавляем всплывашку с координатами
+                circle.bindTooltip(`Узел сетки<br>${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`, {
+                    sticky: true,
+                    direction: 'top'
+                });
+
+                circles.push(circle);
+            });
+
+            gridCirclesLayer = L.layerGroup(circles);
+
+            if (gridVisible) {
+                gridCirclesLayer.addTo(map);
+            }
+
+            console.log(`Добавлено ${uniquePoints.size} красных кружков (узлы сетки)`);
+        }
+
+        function onZoomEnd() {
+            if (!gridVisible) return;
+
+            if (gridDebounceTimer) clearTimeout(gridDebounceTimer);
+            gridDebounceTimer = setTimeout(() => {
+                generateAdaptiveGrid().then(() => {
+                    addGridCircles();  // Пересоздаём кружки после обновления сетки
+                });
+            }, 200);
+        }
+
+        // Функция фильтрации маркеров по районам
+        function filterMarkersByDistrict() {
+            // Получаем выбранные районы
+            const selectedDistricts = Array.from(document.querySelectorAll('#districtCheckboxes input:checked'))
+                .map(i => i.value);
+
+            console.log('Выбранные районы:', selectedDistricts);
+
+            // Сначала скрываем все маркеры
+            allMarkers.forEach(marker => {
+                if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            });
+
+            // Очищаем полигоны Вороного при изменении районов
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                map.removeLayer(influenceLayer);
+                influenceLayer = null;
+            }
+
+            // Очищаем слой конкуренции при изменении районов
+            if (competitionLayer && map.hasLayer(competitionLayer)) {
+                map.removeLayer(competitionLayer);
+                competitionLayer = null;
+            }
+
+            // Сбрасываем кнопку Зоны влияния
+            const btn = document.getElementById('toggleInfluence');
+            if (btn) {
+                btn.textContent = 'Зоны влияния';
+                btn.classList.remove('is-on');
+                btn.setAttribute('aria-pressed', 'false');
+            }
+
+            // Сбрасываем кнопку Интенсивность конкуренции
+            const compBtn = document.getElementById('toggleCompetition');
+            if (compBtn) {
+                compBtn.textContent = 'Интенсивность конкуренции';
+                compBtn.classList.remove('is-on');
+                compBtn.setAttribute('aria-pressed', 'false');
+                competitionVisible = false;
+            }
+
+            // Если ничего не выбрано - не показываем маркеры
+            if (selectedDistricts.length === 0) {
+                setInfo('Выберите район для отображения ТЦ');
+                return;
+            }
+
+            // Показываем маркеры только выбранных районов + новые маркеры без района
+            let visibleCount = 0;
+            allMarkers.forEach(marker => {
+                if (!marker.district || selectedDistricts.includes(marker.district)) {
+                    marker.addTo(map);
+                    visibleCount++;
+                }
+            });
+
+            setInfo(`Показано ТЦ: ${visibleCount}`);
+        }
+
+        function updateVoronoiZones() {
+            if (!window.turf || !window.turf.voronoi) {
+                setInfo('Turf.js не доступен. Проверьте подключение https://unpkg.com/@turf/turf@6/turf.min.js');
+                console.error('turf.voronoi is not available');
+                return;
+            }
+
+            const visibleMarkers = allMarkers.filter(marker => map.hasLayer(marker));
+            if (visibleMarkers.length < 2) {
+                setInfo('Для построения полигонов Тиссена/Вороного нужны минимум 2 видимых торговых центра. Выберите районы или разместите еще точки!');
+                return;
+            }
+
+            let centers = visibleMarkers.map(marker => {
+                let centerData = window.shoppingCenters.find(sc =>
+                    Math.abs(sc.lat - marker.getLatLng().lat) < 0.0001 &&
+                    Math.abs(sc.lng - marker.getLatLng().lng) < 0.0001
+                );
+                return {
+                    lat: marker.getLatLng().lat,
+                    lng: marker.getLatLng().lng,
+                    name: centerData ? centerData.name : (marker.customName || 'Новый ТЦ')
+                };
+            });
+
+            const ptFeatures = centers.map(c => window.turf.point([c.lng, c.lat], { name: c.name }));
+            const ptsFC = window.turf.featureCollection(ptFeatures);
+
+            let bbox = null;
+            if (oblastGeo && oblastGeo.features && oblastGeo.features.length > 0) {
+                bbox = window.turf.bbox(oblastGeo);
+            } else {
+                const lngs = centers.map(c => c.lng);
+                const lats = centers.map(c => c.lat);
+                bbox = [Math.min(...lngs) - 0.05, Math.min(...lats) - 0.05, Math.max(...lngs) + 0.05, Math.max(...lats) + 0.05];
+            }
+
+            let voronoiFC = window.turf.voronoi(ptsFC, { bbox: bbox });
+            if (!voronoiFC) voronoiFC = window.turf.featureCollection([]);
+
+            if (oblastGeo && oblastGeo.features && oblastGeo.features.length > 0) {
+                let clipFeature = oblastGeo.features[0];
+                if (clipFeature.geometry && clipFeature.geometry.type === 'LineString') {
+                    const coords = clipFeature.geometry.coordinates.slice();
+                    if (coords.length && coords[0][0] !== coords[coords.length - 1][0] && coords[0][1] !== coords[coords.length - 1][1]) {
+                        coords.push(coords[0]);
+                    }
+                    clipFeature = window.turf.feature({
+                        type: 'Polygon',
+                        coordinates: [coords]
+                    });
+                }
+                voronoiFC = window.turf.featureCollection(
+                    voronoiFC.features.map(f => {
+                        try {
+                            const clipped = window.turf.intersect(f, clipFeature);
+                            return clipped || null;
+                        } catch (e) {
+                            return null;
+                        }
+                    }).filter(f => f !== null)
+                );
+            }
+
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                map.removeLayer(influenceLayer);
+            }
+
+            influenceLayer = L.geoJSON(voronoiFC, {
+                style: {
+                    color: '#8B0000',
+                    weight: 1.5,
+                    opacity: 0.8,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.15
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties && feature.properties.site && feature.properties.site.properties) {
+                        layer.bindPopup(`<b>${feature.properties.site.properties.name}</b>`);
+                    }
+                }
+            }).addTo(map);
+
+            if (oblastLoaded && oblastLayer) {
+                oblastLayer.addTo(map);
+            }
+
+            const btn = document.getElementById('toggleInfluence');
+            if (btn) {
+                btn.textContent = 'Зоны влияния (вкл)';
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+
+            setInfo(`Построено ${voronoiFC.features.length} полигона(ов) зоны влияния`);
+        }
+
+        function createNewMallMarker(latlng) {
+            console.log('Добавление нового ТЦ в точке', latlng);
+            const mallName = `Потенциальный ТЦ`; // временное имя
+            const greenIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: #27ae60; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const marker = L.marker([latlng.lat, latlng.lng], { icon: greenIcon });
+
+            marker.customName = mallName;
+            marker.district = null; // показываем в любом выбранном фильтре
+            marker.id = `new-${Date.now()}`;
+
+            marker.bindPopup(`
+                <div style="min-width:145px;">
+                    <strong>${mallName}</strong><br>
+                    Потенциальная точка размещения<br><br>
+                    <button id="delete-mall-${marker.id}" style="font-size:12px; padding:4px 6px;">Удалить</button>
+                </div>
+            `);
+
+            marker.on('popupopen', (e) => {
+                const btn = e.popup.getElement().querySelector(`#delete-mall-${marker.id}`);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        removeNewMallMarker(marker);
+                    });
+                }
+            });
+
+            allMarkers.push(marker);
+            marker.addTo(map);
+
+            window.shoppingCenters.push({
+                name: mallName,
+                lat: latlng.lat,
+                lng: latlng.lng,
+                address: 'новый объект',
+                district: 'новый объект'
+            });
+
+            // Перенумеровываем все новые ТЦ
+            renumberNewMalls();
+
+            marker.openPopup();
+
+            setInfo(`Добавлен потенциальный ТЦ на карте. Для добавления ещё точек нажмите на карту.`);
+
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                updateVoronoiZones();
+            }
+        }
+
+        function removeNewMallMarker(marker) {
+            if (map.hasLayer(marker)) {
+                map.removeLayer(marker);
+            }
+
+            const idx = allMarkers.indexOf(marker);
+            if (idx !== -1) allMarkers.splice(idx, 1);
+
+            const existingIdx = window.shoppingCenters.findIndex(sc =>
+                Math.abs(sc.lat - marker.getLatLng().lat) < 0.000001 &&
+                Math.abs(sc.lng - marker.getLatLng().lng) < 0.000001 &&
+                sc.name === marker.customName
+            );
+            if (existingIdx !== -1) window.shoppingCenters.splice(existingIdx, 1);
+
+            // Пересчитываем номера новых ТЦ
+            renumberNewMalls();
+
+            setInfo(`${marker.customName} удалён`);
+            if (influenceLayer && map.hasLayer(influenceLayer)) {
+                updateVoronoiZones();
+            }
+        }
+
+        function renumberNewMalls() {
+            // Находим все новые маркеры
+            const newMarkers = allMarkers.filter(marker => marker.id && marker.id.startsWith('new-'));
+
+            // Сортируем по id (который содержит timestamp)
+            newMarkers.sort((a, b) => a.id.localeCompare(b.id));
+
+            // Перенумеровываем
+            newMarkers.forEach((marker, index) => {
+                const newNumber = index + 1;
+                const newName = `Потенциальный ТЦ ${newNumber}`;
+
+                // Обновляем имя в маркере
+                marker.customName = newName;
+
+                // Обновляем popup
+                marker.setPopupContent(`
+                    <div style="min-width:145px;">
+                        <strong>${newName}</strong><br>
+                        Потенциальная точка размещения<br><br>
+                        <button id="delete-mall-${marker.id}" style="font-size:12px; padding:4px 6px;">Удалить</button>
+                    </div>
+                `);
+
+                // Обновляем в shoppingCenters
+                const scIdx = window.shoppingCenters.findIndex(sc =>
+                    Math.abs(sc.lat - marker.getLatLng().lat) < 0.000001 &&
+                    Math.abs(sc.lng - marker.getLatLng().lng) < 0.000001
+                );
+                if (scIdx !== -1) {
+                    window.shoppingCenters[scIdx].name = newName;
+                }
+            });
+
+            // Обновляем счетчик
+            newMallCount = newMarkers.length;
+        }
+
+        function onMapClickAddMall(e) {
+            console.log('onMapClickAddMall called, placeMode:', placeMode);
+            if (!placeMode) return;
+            console.log('Клик карты (режим размещения):', e.latlng);
+            createNewMallMarker(e.latlng);
+        }
+
+        // Функция расчёта модели Хаффа для слоёв сетки
+        function calculateHuffModel(gridLayer, shoppingCenters) {
+            if (!window.turf || !window.turf.distance || !window.turf.centroid) {
+                console.error('Turf.js не доступен или отсутствуют функции distance/centroid');
+                return [];
+            }
+
+            if (!gridLayer || !shoppingCenters || !Array.isArray(shoppingCenters) || shoppingCenters.length === 0) {
+                console.warn('calculateHuffModel: недостаточно данных для расчёта');
+                return [];
+            }
+
+            const features = getGridFeatures(gridLayer);
+            if (!features.length) {
+                console.warn('calculateHuffModel: не найдены ячейки сетки');
+                return [];
+            }
+
+            const centers = shoppingCenters.map(sc => ({
+                name: sc.name || sc.id || 'unknown',
+                area: Number(sc.area_m2) || 10000,
+                point: window.turf.point([Number(sc.lng), Number(sc.lat)])
+            }));
+
+            features.forEach(cell => {
+                if (!cell) return;
+                cell.properties = cell.properties || {};
+                const centroid = window.turf.centroid(cell);
+                const values = [];
+                let sum = 0;
+
+                centers.forEach(center => {
+                    const rij = window.turf.distance(centroid, center.point, { units: 'kilometers' });
+                    const safeDistance = Math.max(rij, 0.001);
+                    const value = center.area / (safeDistance * safeDistance);
+                    values.push({ name: center.name, value });
+                    sum += value;
+                });
+
+                const huff = values.map(item => ({
+                    name: item.name,
+                    probability: sum > 0 ? item.value / sum : 0
+                }));
+
+                cell.properties.huff = huff;
+                cell.properties.maxProbability = huff.reduce((max, item) => Math.max(max, item.probability), 0);
+            });
+
+            return features;
+        }
+
+        function getGridFeatures(gridLayer) {
+            if (!gridLayer) return [];
+
+            if (gridLayer._layers && typeof gridLayer._layers === 'object') {
+                return Object.values(gridLayer._layers)
+                    .map(layer => layer && layer.feature)
+                    .filter(Boolean);
+            }
+
+            if (Array.isArray(gridLayer.features)) {
+                return gridLayer.features;
+            }
+
+            if (typeof gridLayer.toGeoJSON === 'function') {
+                const geojson = gridLayer.toGeoJSON();
+                return Array.isArray(geojson.features) ? geojson.features : [];
+            }
+
+            if (gridLayer.feature && gridLayer.feature.type === 'Feature') {
+                return [gridLayer.feature];
+            }
+
+            return [];
+        }
+
+        function getCompetitionColor(c) {
+            const hue = c * 120;
+            return `hsl(${hue}, 100%, 50%)`;
+        }
+
+        function getOblastPolygon(oblastGeo) {
+            if (!oblastGeo || !oblastGeo.features) return null;
+
+            // Ищем Polygon или MultiPolygon
+            const polygonFeature = oblastGeo.features.find(f =>
+                f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')
+            );
+
+            if (polygonFeature) return polygonFeature;
+
+            // Если только LineString (граница), конвертируем в полигон
+            const lineFeature = oblastGeo.features.find(f =>
+                f.geometry && f.geometry.type === 'LineString'
+            );
+
+            if (lineFeature) {
+                const coords = lineFeature.geometry.coordinates.slice();
+                // Замыкаем линию
+                if (coords[0][0] !== coords[coords.length - 1][0] ||
+                    coords[0][1] !== coords[coords.length - 1][1]) {
+                    coords.push(coords[0]);
+                }
+                return window.turf.polygon([coords]);
+            }
+
+            return null;
+        }
+
+        function createCompetitionLayer(gridLayer, oblastGeo) {
+            if (!window.turf || !window.turf.intersect) {
+                console.error('Turf.js не доступен или отсутствует turf.intersect');
+                return null;
+            }
+
+            const oblPolygon = getOblastPolygon(oblastGeo);
+            if (!oblPolygon) {
+                console.warn('createCompetitionLayer: не удалось получить polygon из oblastGeo');
+                return null;
+            }
+
+            const gridFeatures = getGridFeatures(gridLayer);
+            if (!gridFeatures.length) {
+                console.warn('createCompetitionLayer: нет ячеек сетки');
+                return null;
+            }
+
+            const clippedFeatures = [];
+
+            gridFeatures.forEach(cell => {
+                if (!cell || !cell.geometry) return;
+                const intersected = window.turf.intersect(cell, oblPolygon);
+                if (!intersected) return;
+
+                intersected.properties = intersected.properties || {};
+                const maxProbability = Number(cell.properties?.maxProbability || 0);
+                intersected.properties.competition = 1 - maxProbability;
+                clippedFeatures.push(intersected);
+            });
+
+            if (!clippedFeatures.length) {
+                console.warn('createCompetitionLayer: не найдено пересечений с границей города');
+                return null;
+            }
+
+            if (competitionLayer && map.hasLayer(competitionLayer)) {
+                map.removeLayer(competitionLayer);
+            }
+
+            competitionLayer = L.geoJSON(clippedFeatures, {
+                style: feature => {
+                    const competition = Number(feature.properties?.competition || 0);
+                    return {
+                        fillColor: getCompetitionColor(competition),
+                        fillOpacity: 0.5,
+                        color: null,
+                        weight: 0
+                    };
+                }
+            });
+
+            return competitionLayer;
+        }
+
+        // Функция переключения сетки анализа (с кружками)
+        function toggleGrid() {
+            const btn = document.getElementById('toggleGrid');
+
+            if (!gridLoaded) {
+                setInfo('Генерация сетки...');
+                generateAdaptiveGrid().then(() => {
+                    if (gridLayer && !gridVisible) {
+                        gridLayer.addTo(map);
+                        addGridCircles();
+                        gridVisible = true;
+                        btn.textContent = 'Аналитическая сетка (вкл)';
+                        btn.classList.add('is-on');
+                        setInfo('Аналитическая сетка включена');
+                    }
+                });
+                return;
+            }
+
+            if (gridVisible) {
+                if (gridLayer && map.hasLayer(gridLayer)) {
+                    map.removeLayer(gridLayer);
+                }
+                if (gridCirclesLayer && map.hasLayer(gridCirclesLayer)) {
+                    map.removeLayer(gridCirclesLayer);
+                }
+                gridVisible = false;
+                btn.textContent = 'Аналитическая сетка';
+                btn.classList.remove('is-on');
+                setInfo('Аналитическая сетка выключена');
+            } else {
+                if (gridLayer && !map.hasLayer(gridLayer)) {
+                    gridLayer.addTo(map);
+                }
+                addGridCircles();
+                gridVisible = true;
+                btn.textContent = 'Аналитическая сетка (вкл)';
+                btn.classList.add('is-on');
+
+                generateAdaptiveGrid();
+                setInfo('Аналитическая сетка включена');
+            }
+        }
+
+        function runCompetitionCalculation() {
+            const btn = document.getElementById('toggleCompetition');
+
+            const visibleMarkers = allMarkers.filter(marker => map.hasLayer(marker));
+            if (visibleMarkers.length < 2) {
+                setInfo('Для расчёта конкуренции нужны минимум 2 видимых торговых центра. Выберите районы!');
+                return;
+            }
+
+            const visibleShoppingCenters = visibleMarkers.map(marker => {
+                return window.shoppingCenters.find(sc =>
+                    Math.abs(sc.lat - marker.getLatLng().lat) < 0.0001 &&
+                    Math.abs(sc.lng - marker.getLatLng().lng) < 0.0001
+                );
+            }).filter(sc => sc);
+
+            if (visibleShoppingCenters.length < 2) {
+                setInfo('Не удалось найти данные видимых ТЦ для расчёта конкуренции');
+                return;
+            }
+
+            calculateHuffModel(gridLayer, visibleShoppingCenters);
+
+            if (competitionLayer && map.hasLayer(competitionLayer)) {
+                map.removeLayer(competitionLayer);
+            }
+            competitionLayer = createCompetitionLayer(gridLayer, oblastGeo);
+            if (!competitionLayer) {
+                setInfo('Не удалось создать слой конкуренции');
+                return;
+            }
+
+            if (competitionVisible) {
+                if (map.hasLayer(competitionLayer)) {
+                    map.removeLayer(competitionLayer);
+                }
+                competitionVisible = false;
+                setInfo('Слой конкуренции скрыт');
+                btn.textContent = 'Интенсивность конкуренции';
+                btn.classList.remove('is-on');
+            } else {
+                if (!map.hasLayer(competitionLayer)) {
+                    competitionLayer.addTo(map);
+                }
+                competitionVisible = true;
+                setInfo('Слой конкуренции отображён');
+                btn.textContent = 'Интенсивность конкуренции (вкл)';
+                btn.classList.add('is-on');
+            }
+
+            btn.setAttribute('aria-pressed', String(competitionVisible));
+        }
+
+        function toggleCompetition() {
+            const btn = document.getElementById('toggleCompetition');
+
+            if (!gridLoaded) {
+                setInfo('Генерация сетки анализа для расчёта конкуренции...');
+                generateAdaptiveGrid().then(() => {
+                    if (!gridLayer) {
+                        setInfo('Не удалось сгенерировать сетку');
+                        return;
+                    }
+                    runCompetitionCalculation();
+                }).catch(error => {
+                    console.error(error);
+                    setInfo('Ошибка при генерации сетки');
+                });
+                return;
+            }
+
+            runCompetitionCalculation();
+
+            btn.setAttribute('aria-pressed', String(competitionVisible));
+        }
+
+        // Функция для переключения видимости препятствий
+        function toggleObstacles() {
+            const btn = document.getElementById('toggleObstacles');
+
+            if (!obstaclesLoaded) {
+                console.log('Препятствия не загружены, начинаем загрузку...');
+                setInfo('Загружаю препятствия...');
+                loadObstaclesGeoJSON().then(() => {
+                    if (!obstaclesLoaded) {
+                        setInfo('❌ Ошибка загрузки препятствий');
+                        return;
+                    }
+                    if (!obstacleLayer) {
+                        setInfo('⚠️ Препятствия загружены, но слой не создан');
+                        return;
+                    }
+                    if (!obstaclesVisible) {
+                        obstacleLayer.addTo(map);
+                        obstaclesVisible = true;
+                        console.log('Препятствия показаны');
+                        setInfo('✅ Препятствия отображены на карте');
+                        btn.textContent = 'Пространственные барьеры (вкл)';
+                        btn.classList.add('is-on');
+                        btn.setAttribute('aria-pressed', 'true');
+                    }
+                }).catch((error) => {
+                    console.error('Ошибка при переключении препятствий:', error);
+                    setInfo(`Ошибка загрузки препятствий: ${error?.message || error}`);
+                });
+                return;
+            }
+
+            if (!obstacleLayer) {
+                console.error('Слой препятствий не инициализирован');
+                setInfo('❌ Ошибка: Слой препятствий не инициализирован');
+                return;
+            }
+
+            if (obstaclesVisible) {
+                if (map.hasLayer(obstacleLayer)) {
+                    map.removeLayer(obstacleLayer);
+                }
+                obstaclesVisible = false;
+                console.log('Препятствия скрыты');
+                setInfo('✅ Препятствия скрыты');
+                btn.textContent = 'Пространственные барьеры';
+                btn.classList.remove('is-on');
+                btn.setAttribute('aria-pressed', 'false');
+            } else {
+                if (!map.hasLayer(obstacleLayer)) {
+                    obstacleLayer.addTo(map);
+                }
+                obstaclesVisible = true;
+                console.log('Препятствия показаны');
+                setInfo('✅ Препятствия отображены на карте');
+                btn.textContent = 'Пространственные барьеры (вкл)';
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        }
+
+        // Функция очистки маршрута
+        function clearRoute() {
+            // Удаляем маршрут с карты
+            if (routeLayer && map.hasLayer(routeLayer)) {
+                map.removeLayer(routeLayer);
+                routeLayer = null;
+            }
+
+            // Удаляем маркеры начала и конца
+            if (window.startMarker) {
+                map.removeLayer(window.startMarker);
+                window.startMarker = null;
+            }
+            if (window.endMarker) {
+                map.removeLayer(window.endMarker);
+                window.endMarker = null;
+            }
+
+            console.log('Маршрут очищен');
+        }
+
+        // Функция обработки ввода адреса через Nominatim с JSONP
+        let jsonpCallbackId = 0;
+
+        function handleAddressInput(query, type) {
+            if (query.length < 3) {
+                hideSuggestions(type);
+                return;
+            }
+
+            const callbackName = `nominatim_callback_${Date.now()}_${jsonpCallbackId++}`;
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&json_callback=${callbackName}`;
+
+            window[callbackName] = function (data) {
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    showSuggestions([], type);
+                } else {
+                    const results = data.map(item => ({
+                        display_name: item.display_name,
+                        lat: parseFloat(item.lat),
+                        lon: parseFloat(item.lon),
+                        type: item.type,
+                        class: item.class
+                    }));
+                    showSuggestions(results, type);
+                }
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+
+            const script = document.createElement('script');
+            script.src = url;
+            script.onerror = function () {
+                console.error('JSONP запрос не удался');
+                showSuggestions([], type);
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            document.body.appendChild(script);
+        }
+
+        // Функция геокодирования (НЕ используется - локальный поиск достаточно)
+        // Оставлена для совместимости, но не вызывается
+        function geocodeAddress(query) {
+            // Используется только локальный поиск для избежания CORS и лимитов API
+            return Promise.resolve([]);
+        }
+
+        // Функция показа подсказок
+        function showSuggestions(results, type) {
+            const containerId = type === 'from' ? 'fromAc' : 'toAc';
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            if (!results || results.length === 0) {
+                const div = document.createElement('div');
+                div.className = 'ac-item';
+                div.textContent = '🔍 Ничего не найдено. Попробуйте изменить запрос.';
+                div.style.color = '#666';
+                div.style.pointerEvents = 'none';
+                div.style.fontStyle = 'italic';
+                container.appendChild(div);
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                return;
+            }
+
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+
+            results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = 'ac-item';
+
+                // Иконка в зависимости от типа
+                let icon = '📍';
+                if (result.type === 'shop' || result.class === 'shop') icon = '🏪';
+                else if (result.type === 'amenity') icon = '🏛️';
+                else if (result.type === 'highway') icon = '🛣️';
+                else if (result.type === 'building') icon = '🏢';
+
+                // Сокращаем слишком длинные названия
+                let displayName = result.display_name;
+                if (displayName.length > 80) {
+                    displayName = displayName.substring(0, 77) + '...';
+                }
+
+                div.innerHTML = `<span>${icon}</span> <span style="margin-left: 8px;">${displayName}</span>`;
+                div.style.cursor = 'pointer';
+                div.addEventListener('click', () => selectSuggestion(result, type));
+                div.addEventListener('mouseover', () => div.style.background = '#f0f0f0');
+                div.addEventListener('mouseout', () => div.style.background = '');
+                container.appendChild(div);
+            });
+        }
+
+        // Функция скрытия подсказок
+        function hideSuggestions(type) {
+            const containerId = type === 'from' ? 'fromAc' : 'toAc';
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.style.display = 'none';
+                container.style.visibility = 'hidden';
+                container.innerHTML = '';
+            }
+        }
+
+        // Функция выбора подсказки
+        function selectSuggestion(result, type) {
+            const inputId = type === 'from' ? 'from' : 'to';
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = result.display_name;
+            }
+
+            // Сохраняем координаты
+            const coords = [result.lon, result.lat];
+            if (type === 'from') {
+                fromCoords = coords;
+                console.log('Установлена точка отправления:', fromCoords);
+            } else {
+                toCoords = coords;
+                console.log('Установлена точка назначения:', toCoords);
+            }
+
+            hideSuggestions(type);
+
+            // Если оба адреса выбраны, строим маршрут
+            if (fromCoords && toCoords) {
+                console.log('Обе точки выбраны, строим маршрут...');
+                // Небольшая задержка для стабильности
+                setTimeout(() => {
+                    buildRoute(fromCoords, toCoords);
+                }, 100);
+            }
+        }
+
+        // Функция построения маршрута через OpenRouteService
+        function buildRoute(fromCoords, toCoords) {
+            // Показываем индикатор загрузки
+            setInfo('Строим маршрут...');
+
+            // Проверяем координаты
+            if (!fromCoords || !toCoords) {
+                setInfo('Ошибка: не выбраны координаты');
+                return;
+            }
+
+            console.log('Building route from', fromCoords, 'to', toCoords);
+
+            // Используем публичный API OSRM вместо OpenRouteService (более надежный и без ключа)
+            // Формат: [lng, lat] -> [lat, lng] для OSRM
+            const url = `https://router.project-osrm.org/route/v1/driving/${fromCoords[0]},${fromCoords[1]};${toCoords[0]},${toCoords[1]}?overview=full&geometries=geojson`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Route data:', data);
+
+                    if (!data.routes || data.routes.length === 0) {
+                        throw new Error('Маршрут не найден');
+                    }
+
+                    const route = data.routes[0];
+                    const distance = route.distance; // в метрах
+                    const geometry = route.geometry;
+
+                    // Удаляем старый маршрут если есть
+                    if (routeLayer && map.hasLayer(routeLayer)) {
+                        map.removeLayer(routeLayer);
+                    }
+
+                    // Создаем новый слой маршрута
+                    routeLayer = L.geoJSON(geometry, {
+                        style: {
+                            color: '#0066ff',
+                            weight: 5,
+                            opacity: 0.8
+                        }
+                    }).addTo(map);
+
+                    // Добавляем всплывающую подсказку с расстоянием
+                    routeLayer.bindPopup(`<b>Расстояние маршрута:</b><br>${(distance / 1000).toFixed(2)} км`).openPopup();
+
+                    // Подгоняем карту под маршрут
+                    const bounds = routeLayer.getBounds();
+                    map.fitBounds(bounds, { padding: [50, 50] });
+
+                    // Добавляем маркеры начала и конца
+                    addRouteMarkers(fromCoords, toCoords);
+
+                    const distanceKm = (distance / 1000).toFixed(2);
+                    setInfo(`✅ Маршрут построен. Расстояние: ${distanceKm} км`);
+                })
+                .catch(error => {
+                    console.error('Ошибка построения маршрута:', error);
+                    setInfo(`❌ Ошибка: ${error.message}. Попробуйте другие адреса.`);
+
+                    // Пробуем альтернативный метод - прямая линия
+                    buildStraightLine(fromCoords, toCoords);
+                });
+        }
+
+        // Добавьте эту функцию для отображения прямой линии в случае ошибки
+        function buildStraightLine(fromCoords, toCoords) {
+            setInfo('Строим прямую линию (приблизительно)...');
+
+            // Удаляем старый маршрут
+            if (routeLayer && map.hasLayer(routeLayer)) {
+                map.removeLayer(routeLayer);
+            }
+
+            // Создаем прямую линию
+            const line = {
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [fromCoords, toCoords]
+                }
+            };
+
+            routeLayer = L.geoJSON(line, {
+                style: {
+                    color: '#ff6600',
+                    weight: 3,
+                    opacity: 0.6,
+                    dashArray: '10, 10'
+                }
+            }).addTo(map);
+
+            // Вычисляем примерное расстояние
+            const distance = calculateDistance(
+                fromCoords[1], fromCoords[0],
+                toCoords[1], toCoords[0]
+            );
+
+            routeLayer.bindPopup(`<b>Примерное расстояние по прямой:</b><br>${distance.toFixed(2)} км`).openPopup();
+
+            const bounds = L.latLngBounds([
+                [fromCoords[1], fromCoords[0]],
+                [toCoords[1], toCoords[0]]
+            ]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+
+            addRouteMarkers(fromCoords, toCoords);
+        }
+
+        // Добавьте функцию для расчета расстояния
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // радиус Земли в км
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Добавьте функцию для отображения маркеров начала и конца маршрута
+        function addRouteMarkers(fromCoords, toCoords) {
+            // Удаляем старые маркеры если есть
+            if (window.startMarker) map.removeLayer(window.startMarker);
+            if (window.endMarker) map.removeLayer(window.endMarker);
+
+            // Создаем иконки
+            const startIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="background-color: #27ae60; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">A</div>',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            });
+
+            const endIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="background-color: #e74c3c; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">B</div>',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            });
+
+            // Добавляем маркеры
+            window.startMarker = L.marker([fromCoords[1], fromCoords[0]], { icon: startIcon })
+                .bindPopup('Точка отправления')
+                .addTo(map);
+
+            window.endMarker = L.marker([toCoords[1], toCoords[0]], { icon: endIcon })
+                .bindPopup('Точка назначения')
+                .addTo(map);
+        }
+        // Управление боковой панелью на мобильных устройствах
+        (function () {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            let isPanelVisible = true;
+
+            // Проверяем, мобильное ли устройство
+            function isMobile() {
+                return window.innerWidth <= 768;
+            }
+
+            // Функция переключения панели
+            function toggleSidebar() {
+                isPanelVisible = !isPanelVisible;
+
+                if (isPanelVisible) {
+                    sidebar.classList.remove('collapsed');
+                    toggleBtn.classList.remove('panel-hidden');
+                    toggleBtn.querySelector('.toggle-icon').textContent = '☰';
+                } else {
+                    sidebar.classList.add('collapsed');
+                    toggleBtn.classList.add('panel-hidden');
+                    toggleBtn.querySelector('.toggle-icon').textContent = '☰';
+                }
+
+                // Обновляем размер карты после анимации
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 300);
+            }
+
+            // Обработчик клика по кнопке
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleSidebar);
+            }
+
+            // Автоматически скрываем панель при маленьком экране
+            function handleResize() {
+                if (isMobile() && isPanelVisible) {
+                    // На мобильных по умолчанию скрываем панель
+                    toggleSidebar();
+                } else if (!isMobile() && !isPanelVisible) {
+                    // На десктопе всегда показываем
+                    toggleSidebar();
+                }
+            }
+
+            // Инициализация при загрузке
+            if (isMobile()) {
+                // Небольшая задержка для плавности
+                setTimeout(() => {
+                    if (isPanelVisible) {
+                        toggleSidebar();
+                    }
+                }, 1000);
+            }
+
+            // Следим за изменением размера окна
+            window.addEventListener('resize', handleResize);
+
+            // Закрытие панели при клике на карту (только на мобильных)
+            map.on('click', function () {
+                if (isMobile() && isPanelVisible) {
+                    toggleSidebar();
+                }
+            });
+
+            // Предотвращаем закрытие при клике внутри панели
+            sidebar.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        })();
+    </script>
+</body>
+
+</html>
